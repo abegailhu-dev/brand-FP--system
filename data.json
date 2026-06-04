@@ -915,7 +915,45 @@
       "personality": "温暖、活泼、值得信赖；如同一位充满爱心的儿童护理专家，既专业严谨又亲切有趣。",
       "promise": "每一款产品都经过皮肤科医生认证，温和无刺激，让父母放心、孩子舒适。",
       "positioning": "专注0-12岁儿童护肤，以\"天然科学\"为核心差异点，定位中高端天然婴童护肤品类领导者。"
-    }
+    },
+    "kpis": [
+      {
+        "id": "KPI001",
+        "name": "全网粉丝总量",
+        "target": 300,
+        "current": 215,
+        "unit": "万",
+        "owner": "耿雨阳",
+        "quarter": "Q2"
+      },
+      {
+        "id": "KPI002",
+        "name": "品牌总曝光量",
+        "target": 8000,
+        "current": 5620,
+        "unit": "万",
+        "owner": "刘媛卿",
+        "quarter": "Q2"
+      },
+      {
+        "id": "KPI003",
+        "name": "品牌GMV",
+        "target": 500,
+        "current": 380,
+        "unit": "万元",
+        "owner": "胡瑕",
+        "quarter": "Q2"
+      },
+      {
+        "id": "KPI004",
+        "name": "全平台搜索指数",
+        "target": 15000,
+        "current": 12500,
+        "unit": "",
+        "owner": "程园",
+        "quarter": "Q2"
+      }
+    ]
   },
   "budgetData": {
     "annual": 12700000,
@@ -2758,5 +2796,5 @@
       }
     ]
   },
-  "_publishedVersion": 1780544017431
+  "_publishedVersion": 1780553102051
 }
