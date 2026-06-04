@@ -1,0 +1,26 @@
+name: Validate data.json
+
+# 每次推送 data.json 到 main 时自动校验,坏数据会让 CI 变红,
+# 提醒维护者修复(避免公开链接静默回退到本地/演示数据)。
+on:
+  push:
+    branches: [main]
+    paths: ['data.json']
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 校验 data.json 结构与版本号
+        run: |
+          python3 - data.json << 'PY'
+          import json, sys
+          d = json.load(open('data.json', encoding='utf-8'))
+          assert isinstance(d, dict), "顶层必须是对象"
+          assert 'employees' in d, "缺少 employees 字段"
+          ver = d.get('_publishedVersion')
+          assert isinstance(ver, int) and ver > 0, "_publishedVersion 必须是正整数时间戳"
+          print(f"✓ data.json 合法 | 员工 {len(d['employees'])} 人 | 发布版本 {ver}")
+          PY
