@@ -3611,7 +3611,7 @@ function renderStrategy(){
   const s = State.data.strategy;
 
   if(State.strategyTab === 'okr'){
-    const qs = ['Q1','Q2','Q3','Q4'].map(q =>
+    const qs = ['Q1','Q2','Q3','Q4','年度'].map(q =>
       `<button class="btn-sm${State.strategyQ===q?' btn':' btn ghost'}" onclick="State.strategyQ='${q}';renderStrategy()">${q}</button>`
     ).join('');
 
@@ -3756,7 +3756,7 @@ function addOKR(){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>目标描述</label><input class="input" id="okr_obj" placeholder="例：Q2品牌声量全面提升" style="width:100%"></div>
     <div class="form-group"><label>季度</label><select class="select" id="okr_q" style="width:100%">
-      ${['Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}
+      ${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}
     </select></div>
   `;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveNewOKR()">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
@@ -3781,7 +3781,7 @@ function editOKR(id){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>目标描述</label><input class="input" id="okr_edit_obj" value="${o.objective}" style="width:100%"></div>
     <div class="form-group"><label>季度</label><select class="select" id="okr_edit_q" style="width:100%">
-      ${['Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===o.quarter?'selected':''}>${q}</option>`).join('')}
+      ${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===o.quarter?'selected':''}>${q}</option>`).join('')}
     </select></div>
   `;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveEditOKR('${id}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
@@ -3893,7 +3893,7 @@ function addKPI(){
     </div>
     <div class="form-row">
       <div class="form-group"><label>负责人</label><select class="select" id="kpi_owner" style="width:100%">${emps}</select></div>
-      <div class="form-group"><label>季度</label><select class="select" id="kpi_q" style="width:100%">${['Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}</select></div>
+      <div class="form-group"><label>季度</label><select class="select" id="kpi_q" style="width:100%">${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}</select></div>
     </div>`;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveNewKPI()">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
   openModal('modalGeneric');
@@ -3923,7 +3923,7 @@ function editKPI(id){
     </div>
     <div class="form-row">
       <div class="form-group"><label>负责人</label><select class="select" id="kpi_e_owner" style="width:100%">${emps}</select></div>
-      <div class="form-group"><label>季度</label><select class="select" id="kpi_e_q" style="width:100%">${['Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===k.quarter?'selected':''}>${q}</option>`).join('')}</select></div>
+      <div class="form-group"><label>季度</label><select class="select" id="kpi_e_q" style="width:100%">${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===k.quarter?'selected':''}>${q}</option>`).join('')}</select></div>
     </div>`;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveEditKPI('${id}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
   openModal('modalGeneric');
