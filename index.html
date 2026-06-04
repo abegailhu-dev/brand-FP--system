@@ -3587,6 +3587,12 @@ function seedStrategy(){
         ]
       }
     ],
+    kpis: [
+      { id:'KPI001', name:'全网粉丝总量', target:300, current:215, unit:'万', owner:'耿雨阳', quarter:'Q2' },
+      { id:'KPI002', name:'品牌总曝光量', target:8000, current:5620, unit:'万', owner:'刘媛卿', quarter:'Q2' },
+      { id:'KPI003', name:'品牌GMV', target:500, current:380, unit:'万元', owner:'胡瑕', quarter:'Q2' },
+      { id:'KPI004', name:'全平台搜索指数', target:15000, current:12500, unit:'', owner:'程园', quarter:'Q2' }
+    ],
     annualStrategy: `# 2026年青蛙王子品牌推广部年度战略\n\n## 战略主题\n"自然守护·亲子共长" — 以儿童健康为核心，构建中国最值得信赖的婴童护肤品牌生态。\n\n## 核心战略方向\n\n### 1. 品牌声量全面升级\n聚焦全域搜索指数与社交声量，从"知名品牌"升级为"首选品牌"。重点布局小红书、抖音、视频号三端内容矩阵，以科学成分+亲子情感双线驱动内容传播。\n\n### 2. 数字化营销提效\n建立品牌私域流量池，打通会员体系与电商平台数据，实现精准人群触达与再营销。目标全年会员DAU达8000，复购率提升15个百分点。\n\n### 3. 大促节点突破\n全年重点布局618、双11、年货节三大节点Campaign，单次Campaign GMV较2025年提升30%。强化KOL生态，建立长效达人合作机制。\n\n### 4. 品牌资产沉淀\n完成品牌VI 3.0升级，统一全渠道视觉语言。发布品牌白皮书，强化"天然·安全·科学"品牌心智。\n\n## 年度预算规划\n全年营销预算1270万元，KOL合作占比35%，线下活动25%，数字投放20%，视觉物料15%，其他5%。\n\n## 关键里程碑\n- Q1：品牌VI升级完成，会员2.0系统上线\n- Q2：618 Campaign突破，粉丝总量300万\n- Q3：暑期亲子Campaign，双平台破亿曝光\n- Q4：双11大促，年度品牌白皮书发布`,
     brandHouse: {
       vision:'成为中国妈妈最信赖的天然婴童护肤品牌，让每一个孩子在爱与自然中健康成长。',
@@ -3706,11 +3712,13 @@ function seedBrandAssets(){
 
 function renderStrategy(){
   if(!State.data.strategy) State.data.strategy = seedStrategy();
+  if(!State.data.strategy.kpis) State.data.strategy.kpis = (seedStrategy().kpis || []);
   State.strategyTab = State.strategyTab || 'okr';
   State.strategyQ = State.strategyQ || 'Q2';
+  State.goalTab = State.goalTab || 'kpi';
 
   const tabs = [
-    { key:'okr', label:'OKR 目标看板' },
+    { key:'okr', label:'目标看板' },
     { key:'annual', label:'年度战略文档' },
     { key:'house', label:'品牌屋' }
   ].map(t => `<div class="sub-tab${State.strategyTab===t.key?' active':''}" onclick="State.strategyTab='${t.key}';renderStrategy()">${t.label}</div>`).join('');
@@ -3767,11 +3775,60 @@ function renderStrategy(){
       </div>`;
     }).join('') || `<div style="text-align:center;padding:48px;color:var(--muted);">暂无 ${State.strategyQ} OKR，点击右上角添加</div>`;
 
-    body = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <div style="display:flex;gap:6px;">${qs}</div>
-      <button class="btn" onclick="addOKR()">+ 新增目标</button>
-    </div>
-    ${okrCards}`;
+    // 内层 KPI / OKR 切换
+    const goalTabs = [
+      { key:'kpi', label:'KPI 指标' },
+      { key:'okr', label:'OKR 目标' }
+    ].map(t => `<div class="sub-tab${State.goalTab===t.key?' active':''}" style="font-size:12px;padding:6px 14px;" onclick="State.goalTab='${t.key}';renderStrategy()">${t.label}</div>`).join('');
+
+    let goalBody = '';
+    if(State.goalTab === 'kpi'){
+      const kpis = (s.kpis||[]).filter(k => k.quarter === State.strategyQ);
+      const kpiCards = kpis.map(k => {
+        const t = Number(k.target)||1;
+        const pct = Math.min(100, Math.round(Number(k.current)/t*100));
+        const color = pct >= 80 ? 'var(--frog-mint)' : pct >= 50 ? 'var(--frog-yellow)' : 'var(--risk)';
+        return `<div class="card elevated" style="margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="flex:1;">
+              <div style="font-weight:700;font-size:15px;">${k.name}</div>
+              <span style="font-size:12px;color:var(--muted);">负责人 ${k.owner||'—'}</span>
+            </div>
+            <span class="pill ${pct>=80?'green':pct>=50?'yellow':'red'}">${pct}%</span>
+            <div style="display:flex;gap:6px;margin-left:12px;">
+              <button class="btn-sm ghost" onclick="editKPI('${k.id}')">编辑</button>
+              <button class="btn-sm ghost" style="color:var(--risk);" onclick="deleteKPI('${k.id}')">删除</button>
+            </div>
+          </div>
+          <div style="background:var(--line-2);border-radius:4px;height:8px;overflow:hidden;">
+            <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .4s;"></div>
+          </div>
+          <div style="margin-top:4px;font-size:12px;color:var(--muted);">当前 ${k.current}${k.unit||''} / 目标 ${k.target}${k.unit||''}</div>
+        </div>`;
+      }).join('') || `<div style="text-align:center;padding:48px;color:var(--muted);">暂无 ${State.strategyQ} KPI，点击右上角添加或导入CSV</div>`;
+
+      goalBody = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="display:flex;gap:6px;">${qs}</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn ghost" onclick="downloadKPITemplate()">📥 CSV模板</button>
+          <button class="btn ghost" onclick="importKPICsv()">📤 导入CSV</button>
+          <button class="btn" onclick="addKPI()">+ 新增KPI</button>
+        </div>
+      </div>
+      ${kpiCards}`;
+    } else {
+      goalBody = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+        <div style="display:flex;gap:6px;">${qs}</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn ghost" onclick="downloadOKRTemplate()">📥 CSV模板</button>
+          <button class="btn ghost" onclick="importOKRCsv()">📤 导入CSV</button>
+          <button class="btn" onclick="addOKR()">+ 新增目标</button>
+        </div>
+      </div>
+      ${okrCards}`;
+    }
+
+    body = `<div style="display:flex;gap:6px;margin-bottom:20px;">${goalTabs}</div>${goalBody}`;
 
   } else if(State.strategyTab === 'annual'){
     body = `<div class="card elevated">
@@ -3936,6 +3993,119 @@ function deleteKR(okrId, krId){
   Storage.save(State.data);
   closeModal('modalGeneric');
   renderStrategy();
+}
+
+/* ===== KPI 指标 增删改 ===== */
+function addKPI(){
+  const emps = activeEmployees().map(e=>`<option value="${e.name}">${e.name}</option>`).join('');
+  $('#modalGenericTitle').textContent = '新增 KPI 指标';
+  $('#modalGenericSub').textContent = State.strategyQ;
+  $('#modalGenericBody').innerHTML = `
+    <div class="form-group"><label>指标名称</label><input class="input" id="kpi_name" placeholder="例：全网粉丝总量" style="width:100%"></div>
+    <div class="form-row">
+      <div class="form-group"><label>目标值</label><input class="input" id="kpi_target" type="number" value="100"></div>
+      <div class="form-group"><label>当前值</label><input class="input" id="kpi_current" type="number" value="0"></div>
+      <div class="form-group"><label>单位</label><input class="input" id="kpi_unit" placeholder="万/万元/%" value=""></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>负责人</label><select class="select" id="kpi_owner" style="width:100%">${emps}</select></div>
+      <div class="form-group"><label>季度</label><select class="select" id="kpi_q" style="width:100%">${['Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}</select></div>
+    </div>`;
+  $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveNewKPI()">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
+  openModal('modalGeneric');
+}
+
+function saveNewKPI(){
+  const name = $('#kpi_name').value.trim();
+  if(!name){ alert('请填写指标名称'); return; }
+  State.data.strategy.kpis.push({ id:'KPI'+Date.now(), name, target:Number($('#kpi_target').value)||100, current:Number($('#kpi_current').value)||0, unit:$('#kpi_unit').value.trim(), owner:$('#kpi_owner').value, quarter:$('#kpi_q').value });
+  Storage.save(State.data);
+  closeModal('modalGeneric');
+  renderStrategy();
+}
+
+function editKPI(id){
+  const k = State.data.strategy.kpis.find(x=>x.id===id);
+  if(!k) return;
+  const emps = activeEmployees().map(e=>`<option value="${e.name}" ${e.name===k.owner?'selected':''}>${e.name}</option>`).join('');
+  $('#modalGenericTitle').textContent = '编辑 KPI 指标';
+  $('#modalGenericSub').textContent = k.quarter;
+  $('#modalGenericBody').innerHTML = `
+    <div class="form-group"><label>指标名称</label><input class="input" id="kpi_e_name" value="${k.name}" style="width:100%"></div>
+    <div class="form-row">
+      <div class="form-group"><label>目标值</label><input class="input" id="kpi_e_target" type="number" value="${k.target}"></div>
+      <div class="form-group"><label>当前值</label><input class="input" id="kpi_e_current" type="number" value="${k.current}"></div>
+      <div class="form-group"><label>单位</label><input class="input" id="kpi_e_unit" value="${k.unit||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>负责人</label><select class="select" id="kpi_e_owner" style="width:100%">${emps}</select></div>
+      <div class="form-group"><label>季度</label><select class="select" id="kpi_e_q" style="width:100%">${['Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===k.quarter?'selected':''}>${q}</option>`).join('')}</select></div>
+    </div>`;
+  $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveEditKPI('${id}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
+  openModal('modalGeneric');
+}
+
+function saveEditKPI(id){
+  const k = State.data.strategy.kpis.find(x=>x.id===id);
+  if(!k) return;
+  k.name = $('#kpi_e_name').value.trim();
+  k.target = Number($('#kpi_e_target').value)||1;
+  k.current = Number($('#kpi_e_current').value)||0;
+  k.unit = $('#kpi_e_unit').value.trim();
+  k.owner = $('#kpi_e_owner').value;
+  k.quarter = $('#kpi_e_q').value;
+  Storage.save(State.data);
+  closeModal('modalGeneric');
+  renderStrategy();
+}
+
+function deleteKPI(id){
+  if(!confirm('确认删除该 KPI 指标？')) return;
+  State.data.strategy.kpis = State.data.strategy.kpis.filter(x=>x.id!==id);
+  Storage.save(State.data);
+  renderStrategy();
+}
+
+/* ===== KPI CSV 导入 / 模板 ===== */
+function downloadKPITemplate(){
+  const csv = '指标名称,目标值,当前值,单位,负责人,季度\n全网粉丝总量,300,215,万,耿雨阳,Q2';
+  const blob = new Blob(['﻿'+csv],{type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='KPI数据模板.csv'; a.click();
+}
+
+function importKPICsv(){
+  csvImportFlow({
+    title:'导入 KPI 指标', sub:'KPI CSV',
+    rowToObj:(c,i)=> c[0] ? { id:'KPI'+Date.now()+i, name:c[0], target:Number(c[1])||100, current:Number(c[2])||0, unit:(c[3]||'').trim(), owner:c[4]||'', quarter:(c[5]||State.strategyQ).trim() } : null,
+    onImport:(items)=>{ State.data.strategy.kpis.push(...items); },
+    after:()=>renderStrategy()
+  });
+}
+
+/* ===== OKR CSV 导入 / 模板（平表自动归组：相同[目标+季度]的行归并到同一OKR） ===== */
+function downloadOKRTemplate(){
+  const csv = '目标Objective,季度,关键结果KR,目标值,当前值,负责人\n'
+    + 'Q2品牌声量全面提升,Q2,全平台搜索指数从12500提升至15000,15000,12500,程园\n'
+    + 'Q2品牌声量全面提升,Q2,小红书品牌词搜索量环比增长30%,30,18,刘媛卿';
+  const blob = new Blob(['﻿'+csv],{type:'text/csv'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='OKR数据模板.csv'; a.click();
+}
+
+function importOKRCsv(){
+  csvImportFlow({
+    title:'导入 OKR 目标', sub:'OKR CSV',
+    // 每行先转为中间结构，归组在 onImport 完成
+    rowToObj:(c,i)=> c[0] ? { _obj:c[0].trim(), _q:(c[1]||State.strategyQ).trim(), _desc:(c[2]||'').trim(), _target:Number(c[3])||100, _current:Number(c[4])||0, _owner:(c[5]||'').trim() } : null,
+    onImport:(rows)=>{
+      rows.forEach((r,idx)=>{
+        // 同[目标+季度]找现有OKR，没有则新建
+        let o = State.data.strategy.okrs.find(x=>x.objective===r._obj && x.quarter===r._q);
+        if(!o){ o = { id:'OKR'+Date.now()+idx, objective:r._obj, quarter:r._q, keyResults:[] }; State.data.strategy.okrs.push(o); }
+        if(r._desc) o.keyResults.push({ id:'KR'+Date.now()+idx, desc:r._desc, target:r._target, current:r._current, owner:r._owner });
+      });
+    },
+    after:()=>renderStrategy()
+  });
 }
 
 function saveAnnualStrategy(){
