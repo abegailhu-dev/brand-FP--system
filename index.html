@@ -1587,7 +1587,40 @@ const DAYS_OF_WEEK = ['周一','周二','周三','周四','周五'];
 
 const Storage = {
   KEY: 'frogprince_dept_os_v2',
+  DB: 'frogprince_dept_os',
+  STORE: 'kv',
   _mem: null,
+  _db: null,
+
+  /* ---- IndexedDB backend (主存储, 容量可达数百MB~GB级, 解决localStorage 5MB限制) ---- */
+  _idbOpen(){
+    if(this._db) return Promise.resolve(this._db);
+    return new Promise((resolve, reject)=>{
+      if(typeof indexedDB === 'undefined'){ reject(new Error('no-idb')); return; }
+      const req = indexedDB.open(this.DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if(!db.objectStoreNames.contains(this.STORE)) db.createObjectStore(this.STORE);
+      };
+      req.onsuccess = () => { this._db = req.result; resolve(this._db); };
+      req.onerror = () => reject(req.error);
+    });
+  },
+  _idbGet(key){
+    return this._idbOpen().then(db => new Promise((resolve, reject)=>{
+      const r = db.transaction(this.STORE,'readonly').objectStore(this.STORE).get(key);
+      r.onsuccess = () => resolve(r.result);
+      r.onerror = () => reject(r.error);
+    }));
+  },
+  _idbSet(key, val){
+    return this._idbOpen().then(db => new Promise((resolve, reject)=>{
+      const tx = db.transaction(this.STORE,'readwrite');
+      tx.objectStore(this.STORE).put(val, key);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    }));
+  },
 
   async _useWindowStorage(){
     return typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function';
@@ -1601,12 +1634,19 @@ const Storage = {
   },
 
   async load(){
+    // 1) IndexedDB 优先 (大容量主存储)
+    try{
+      const v = await this._idbGet(this.KEY);
+      if(v) return typeof v === 'string' ? JSON.parse(v) : v;
+    }catch(_){}
+    // 2) 宿主 window.storage
     try{
       if(await this._useWindowStorage()){
         const r = await window.storage.get(this.KEY);
         if(r && r.value) return JSON.parse(r.value);
       }
     }catch(_){}
+    // 3) localStorage (旧数据自动迁移来源)
     try{
       if(await this._useLocalStorage()){
         const v = localStorage.getItem(this.KEY);
@@ -1618,10 +1658,15 @@ const Storage = {
   },
 
   async save(data){
-    const s = JSON.stringify(data);
-    try{ if(await this._useWindowStorage()) await window.storage.set(this.KEY, s); }catch(_){}
-    try{ if(await this._useLocalStorage()) localStorage.setItem(this.KEY, s); }catch(_){}
     this._mem = data;
+    const s = JSON.stringify(data);
+    let idbOk = false;
+    // 1) IndexedDB 主存储
+    try{ await this._idbSet(this.KEY, s); idbOk = true; }catch(_){}
+    // 2) 宿主 window.storage (存在则同步一份)
+    try{ if(await this._useWindowStorage()) await window.storage.set(this.KEY, s); }catch(_){}
+    // 3) IndexedDB 不可用时才回退 localStorage (避免大数据触发 5MB 配额错误)
+    if(!idbOk){ try{ if(await this._useLocalStorage()) localStorage.setItem(this.KEY, s); }catch(err){ if(err && err.name === 'QuotaExceededError') alert('本地存储已满 (localStorage 约5MB上限)。建议导出JSON备份，或改用图片链接而非内嵌图片。'); } }
     const t = new Date().toLocaleTimeString('zh-CN');
     const tip = document.getElementById('lastSavedTip');
     if(tip) tip.textContent = '最后保存 · ' + t;
@@ -3000,6 +3045,15 @@ function renderDataManage(){
         <button class="btn ghost" onclick="resetData()" style="color:var(--risk); border-color:#fee2e2;">重置</button>
       </div>
     </div>
+    <div class="card elevated" style="margin-bottom:28px;border-left:3px solid var(--frog-mint);">
+      <div class="card-title">🌐 发布到公开链接 (data.json)</div>
+      <div class="card-desc">导出当前数据为 <strong>data.json</strong>，上传到 <code>brand-FP--system</code> 仓库根目录覆盖旧文件，约1分钟后所有人刷新公开链接即可看到最新数据。</div>
+      <div class="notice" style="margin-top:12px;"><span class="notice-icon">💡</span><div>发布流程：① 在系统里录入/修改数据 → ② 点下方「导出 data.json」→ ③ 到 GitHub 仓库 Upload files 拖入覆盖 → ④ 完成。同事们打开链接会自动加载到你发布的最新版本。</div></div>
+      <div style="display:flex; gap:12px; margin-top:14px; flex-wrap:wrap; align-items:center;">
+        <button class="btn" onclick="exportPublishData()">📤 导出 data.json（用于发布）</button>
+        <span id="publishStatusTip" style="font-size:12px;color:var(--muted);">${State.data._baseVersion?('当前数据基于发布版本 '+new Date(State.data._baseVersion).toLocaleString('zh-CN')):'当前为本地数据，尚未发布'}</span>
+      </div>
+    </div>
     <div class="card elevated" style="margin-bottom:28px;">
       <div class="card-title">CSV模板下载</div>
       <div class="card-desc">下载标准CSV模板，填写后通过下方CSV导入功能批量录入</div>
@@ -3331,6 +3385,25 @@ function exportData(){
   a.href = URL.createObjectURL(blob);
   a.download = 'frogprince_dept_os_' + new Date().toISOString().slice(0,10) + '.json';
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+/* 导出 data.json 用于发布：打上新版本号，所有访问者下次加载会自动采用 */
+function exportPublishData(){
+  const data = JSON.parse(JSON.stringify(State.data));
+  const ver = Date.now();
+  data._publishedVersion = ver;
+  delete data._baseVersion;
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'data.json';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  // 本地标记已同步到该版本，避免自己下次加载被"回滚"提示
+  State.data._baseVersion = ver;
+  Storage.save(State.data);
+  const tip = document.getElementById('publishStatusTip');
+  if(tip) tip.textContent = '已导出发布版本 ' + new Date(ver).toLocaleString('zh-CN');
+  alert('已导出 data.json ✓\n\n下一步：打开 brand-FP--system 仓库 → Add file → Upload files → 拖入这个 data.json 覆盖旧文件 → Commit。\n约1分钟后所有人刷新公开链接即可看到最新数据。');
 }
 
 function importData(ev){
@@ -6344,13 +6417,13 @@ function renderConsumer(){
     ${(cd.personaUploads&&cd.personaUploads.length) ? `<div class="card elevated" style="margin-top:16px;">
       <div class="card-title">已上传人群数据资料</div>
       <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;">
-        ${cd.personaUploads.map((u,i)=>u.type==='image'?`<div style="text-align:center;"><img src="${u.data}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);"><div style="font-size:11px;color:var(--muted);margin-top:4px;">${u.name}</div><button class="btn-sm ghost" onclick="deletePersonaUpload(${i})">删除</button></div>`:`<div class="pill gray">📄 ${u.name}</div>`).join('')}
+        ${cd.personaUploads.map((u,i)=>u.type==='image'?`<div style="text-align:center;"><a href="${u.url||u.data}" target="_blank" rel="noopener"><img src="${u.url||u.data}" style="width:120px;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);" onerror="this.style.opacity=0.3;this.title='图片链接无法加载';"></a><div style="font-size:11px;color:var(--muted);margin-top:4px;">${u.name}</div><button class="btn-sm ghost" onclick="deletePersonaUpload(${i})">删除</button></div>`:`<div class="pill gray">📄 ${u.name}</div>`).join('')}
       </div>
     </div>` : ''}
     <div style="margin-top:20px;display:flex;gap:8px;justify-content:flex-end;">
       <button class="btn ghost sm" onclick="downloadPersonaTemplate()">📥 模板</button>
       <button class="btn ghost sm" onclick="importPersonaCsv()">📤 导入人群数据CSV</button>
-      <label class="btn ghost sm" style="cursor:pointer;">🖼 上传数据图片<input type="file" accept="image/*" style="display:none;" onchange="uploadPersonaImage(event)"></label>
+      <button class="btn ghost sm" onclick="addPersonaImageLink()">🖼 录入数据图片链接</button>
       <button class="btn ghost sm" onclick="openAddPersona()">+ 新增画像</button>
     </div>`;
   } else if(subView === 'surveys'){
@@ -6550,18 +6623,25 @@ function importPersonaCsv(){
     after:()=>{ State._consumerTab='personas'; renderConsumer(); }
   });
 }
-function uploadPersonaImage(ev){
-  const file = ev.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const cd = State.data.consumerData;
-    if(!cd.personaUploads) cd.personaUploads = [];
-    cd.personaUploads.push({type:'image', name:file.name, data:e.target.result});
-    cd.personaSummary = (cd.personaSummary||'') + (cd.personaSummary?'\n':'') + `• 已上传人群数据图片「${file.name}」，建议结合图中数据补充画像维度。`;
-    Storage.save(State.data); renderConsumer();
-  };
-  reader.readAsDataURL(file);
-  ev.target.value='';
+function addPersonaImageLink(){
+  $('#modalGenericTitle').textContent = '录入人群数据图片链接';
+  $('#modalGenericSub').textContent = 'PERSONA IMAGE LINK';
+  $('#modalGenericBody').innerHTML = `
+    <div class="notice"><span class="notice-icon">💡</span><div>为避免占用本地存储空间，图片请先上传到图床 / 企业网盘 / GitHub 仓库，这里只填入图片网址。链接图片不占本地容量。</div></div>
+    <div class="form-row full"><div class="form-group"><label>图片名称 / 说明</label><input class="input" id="pil_name" placeholder="如：抖音人群画像 2026Q2"></div></div>
+    <div class="form-row full"><div class="form-group"><label>图片链接 URL</label><input class="input" id="pil_url" placeholder="https://..."></div></div>`;
+  $('#modalGenericFoot').innerHTML = '<button class="btn ghost" onclick="closeModal(\'modalGeneric\')">取消</button><button class="btn" onclick="savePersonaImageLink()">保存</button>';
+  openModal('modalGeneric');
+}
+function savePersonaImageLink(){
+  const url = $('#pil_url').value.trim();
+  const name = $('#pil_name').value.trim() || '人群数据图片';
+  if(!url){ alert('请填写图片链接 URL'); return; }
+  const cd = State.data.consumerData;
+  if(!cd.personaUploads) cd.personaUploads = [];
+  cd.personaUploads.push({type:'image', name, url});
+  cd.personaSummary = (cd.personaSummary||'') + (cd.personaSummary?'\n':'') + `• 已录入人群数据图片「${name}」，建议结合图中数据补充画像维度。`;
+  Storage.save(State.data); closeModal('modalGeneric'); renderConsumer();
 }
 function deletePersonaUpload(i){
   const cd = State.data.consumerData;
@@ -7429,15 +7509,46 @@ function render(){
 
 /* ============ Init ============ */
 
+/* 尝试读取与 index.html 同目录下的 data.json（发布数据源）。
+   本地 file:// 或无该文件时返回 null，自动回退到本地存储/演示数据。 */
+async function fetchPublishedData(){
+  try{
+    const res = await fetch('./data.json', {cache:'no-store'});
+    if(!res.ok) return null;
+    const json = await res.json();
+    if(json && typeof json === 'object' && (json.employees || json._publishedVersion)) return json;
+  }catch(_){}
+  return null;
+}
+
 async function init(){
   const saved = await Storage.load();
-  State.data = saved || seedData();
+  const published = await fetchPublishedData();
+
+  if(published){
+    // 发布模式：按版本号决定是否采用最新发布数据
+    const pv = published._publishedVersion || 0;
+    const bv = (saved && saved._baseVersion) || 0;
+    if(!saved || pv > bv){
+      // 仓库里有更新的发布版本 → 所有人采用最新发布数据
+      published._baseVersion = pv;
+      State.data = published;
+      await Storage.save(State.data);
+    } else {
+      // 本地数据基于的版本不旧于发布版本 → 保留本地编辑（维护者未导出的改动）
+      State.data = saved;
+    }
+  } else {
+    // 无发布数据源 → 沿用本地存储或演示数据
+    State.data = saved || seedData();
+    if(!saved) await Storage.save(State.data);
+  }
+
   // Ensure required data structures exist
   if(!State.data.tasks) State.data.tasks = seedData().tasks;
   if(!State.data.taskPool) State.data.taskPool = seedData().taskPool;
   if(!State.data.dashboardData) State.data.dashboardData = seedData().dashboardData;
   if(!State.data.currentWeek) State.data.currentWeek = '2026-W23';
-  if(!saved) Storage.save(State.data);
   bindNav();
   render();
 }

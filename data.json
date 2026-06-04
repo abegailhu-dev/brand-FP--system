@@ -1,0 +1,2762 @@
+{
+  "employees": [
+    {
+      "id": "E001",
+      "name": "胡瑕",
+      "position": "品牌经理",
+      "group": "/",
+      "joinDate": "2022-03-15",
+      "yearsInRole": 4,
+      "status": "在岗",
+      "personal": {
+        "绩效": 9,
+        "技能": 8,
+        "成长": 7,
+        "市场敏锐度": 8,
+        "执行力": 9,
+        "沟通力": 9,
+        "统筹管理": 9
+      },
+      "position_scores": {
+        "专业度": 8,
+        "执行力": 8,
+        "协作沟通": 9,
+        "学习与适应": 7,
+        "创新与数字化": 7,
+        "战略契合度": 9,
+        "用户导向": 8
+      },
+      "notes": "部门负责人",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E002",
+      "name": "程园",
+      "position": "品牌主管",
+      "group": "/",
+      "joinDate": "2023-06-01",
+      "yearsInRole": 3,
+      "status": "在岗",
+      "personal": {
+        "绩效": 8,
+        "技能": 8,
+        "成长": 8,
+        "市场敏锐度": 7,
+        "执行力": 9,
+        "沟通力": 8,
+        "统筹管理": 8
+      },
+      "position_scores": {
+        "专业度": 8,
+        "执行力": 9,
+        "协作沟通": 8,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 7,
+        "用户导向": 7
+      },
+      "notes": "统筹策略和预算",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E003",
+      "name": "刘媛卿",
+      "position": "品牌文案策划专员",
+      "group": "品牌策略与内容组",
+      "joinDate": "2023-09-10",
+      "yearsInRole": 2,
+      "status": "在岗",
+      "personal": {
+        "绩效": 7,
+        "技能": 8,
+        "成长": 8,
+        "市场敏锐度": 8,
+        "执行力": 7,
+        "沟通力": 7,
+        "统筹管理": 6
+      },
+      "position_scores": {
+        "专业度": 8,
+        "执行力": 7,
+        "协作沟通": 7,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 7,
+        "用户导向": 8
+      },
+      "notes": "文案功底好",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E004",
+      "name": "宋麒声",
+      "position": "品牌活动策划专员",
+      "group": "品牌策略与内容组",
+      "joinDate": "2025-03-01",
+      "yearsInRole": 1,
+      "status": "在岗",
+      "personal": {
+        "绩效": 6,
+        "技能": 7,
+        "成长": 8,
+        "市场敏锐度": 7,
+        "执行力": 7,
+        "沟通力": 7,
+        "统筹管理": 6
+      },
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 7,
+        "协作沟通": 7,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 6,
+        "用户导向": 7
+      },
+      "notes": "新入职活动策划",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E005",
+      "name": "李文婷",
+      "position": "品牌活动策划专员",
+      "group": "品牌策略与内容组",
+      "joinDate": "2025-04-01",
+      "yearsInRole": 1,
+      "status": "在岗",
+      "personal": {
+        "绩效": 6,
+        "技能": 7,
+        "成长": 8,
+        "市场敏锐度": 7,
+        "执行力": 7,
+        "沟通力": 8,
+        "统筹管理": 5
+      },
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 7,
+        "协作沟通": 8,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 6,
+        "用户导向": 7
+      },
+      "notes": "新入职活动策划",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E006",
+      "name": "赵倍",
+      "position": "品牌会员商城运营专员",
+      "group": "品牌策略与内容组",
+      "joinDate": "2025-05-01",
+      "yearsInRole": 0,
+      "status": "在岗",
+      "personal": {
+        "绩效": 5,
+        "技能": 7,
+        "成长": 8,
+        "市场敏锐度": 6,
+        "执行力": 7,
+        "沟通力": 7,
+        "统筹管理": 5
+      },
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 7,
+        "协作沟通": 7,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 6,
+        "用户导向": 8
+      },
+      "notes": "新入职会员运营",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E007",
+      "name": "饶学佳",
+      "position": "中级品牌推广专员",
+      "group": "整合营销推广组",
+      "joinDate": "2024-02-20",
+      "yearsInRole": 2,
+      "status": "在岗",
+      "personal": {
+        "绩效": 7,
+        "技能": 7,
+        "成长": 8,
+        "市场敏锐度": 7,
+        "执行力": 8,
+        "沟通力": 7,
+        "统筹管理": 6
+      },
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 8,
+        "协作沟通": 8,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 6,
+        "用户导向": 7
+      },
+      "notes": "执行稳定",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E008",
+      "name": "李若琳",
+      "position": "初级品牌推广专员",
+      "group": "整合营销推广组",
+      "joinDate": "2025-06-01",
+      "yearsInRole": 0,
+      "status": "在岗",
+      "personal": {
+        "绩效": 5,
+        "技能": 6,
+        "成长": 8,
+        "市场敏锐度": 7,
+        "执行力": 7,
+        "沟通力": 7,
+        "统筹管理": 5
+      },
+      "position_scores": {
+        "专业度": 6,
+        "执行力": 7,
+        "协作沟通": 7,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 5,
+        "用户导向": 7
+      },
+      "notes": "新入职推广",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E009",
+      "name": "田慧慧",
+      "position": "中级品牌视觉设计师",
+      "group": "品牌视觉创意组",
+      "joinDate": "2023-04-12",
+      "yearsInRole": 3,
+      "status": "在岗",
+      "personal": {
+        "绩效": 8,
+        "技能": 9,
+        "成长": 7,
+        "市场敏锐度": 6,
+        "执行力": 8,
+        "沟通力": 6,
+        "统筹管理": 6
+      },
+      "position_scores": {
+        "专业度": 9,
+        "执行力": 8,
+        "协作沟通": 6,
+        "学习与适应": 7,
+        "创新与数字化": 8,
+        "战略契合度": 6,
+        "用户导向": 6
+      },
+      "notes": "视觉功底扎实",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E010",
+      "name": "冯宇",
+      "position": "初级品牌视觉设计师",
+      "group": "品牌视觉创意组",
+      "joinDate": "2025-05-15",
+      "yearsInRole": 0,
+      "status": "在岗",
+      "personal": {
+        "绩效": 5,
+        "技能": 7,
+        "成长": 8,
+        "市场敏锐度": 6,
+        "执行力": 7,
+        "沟通力": 6,
+        "统筹管理": 5
+      },
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 7,
+        "协作沟通": 6,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 5,
+        "用户导向": 6
+      },
+      "notes": "新入职设计师",
+      "lastReview": "2026-Q1"
+    },
+    {
+      "id": "E011",
+      "name": "耿雨阳",
+      "position": "摄影摄像师",
+      "group": "品牌视觉创意组",
+      "joinDate": "2024-05-01",
+      "yearsInRole": 2,
+      "status": "在岗",
+      "personal": {
+        "绩效": 7,
+        "技能": 8,
+        "成长": 8,
+        "市场敏锐度": 8,
+        "执行力": 8,
+        "沟通力": 7,
+        "统筹管理": 5
+      },
+      "position_scores": {
+        "专业度": 8,
+        "执行力": 8,
+        "协作沟通": 7,
+        "学习与适应": 8,
+        "创新与数字化": 9,
+        "战略契合度": 6,
+        "用户导向": 8
+      },
+      "notes": "短视频能力强",
+      "lastReview": "2026-Q1"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "T001",
+      "title": "618 Campaign 抖音达人筛选",
+      "type": "线上推广/社媒/KOL",
+      "assignee": "李若琳",
+      "priority": "P1",
+      "status": "进行中",
+      "weekOf": "2026-W23",
+      "estimatedHours": 8,
+      "actualHours": 3,
+      "project": "618大促Campaign",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "胡瑕",
+      "notes": "",
+      "days": [
+        "周一",
+        "周二"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T002",
+      "title": "618主视觉KV设计",
+      "type": "视觉设计/KV/物料",
+      "assignee": "田慧慧",
+      "priority": "P0",
+      "status": "进行中",
+      "weekOf": "2026-W23",
+      "estimatedHours": 12,
+      "actualHours": 6,
+      "project": "618大促Campaign",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "胡瑕",
+      "notes": "",
+      "days": [
+        "周一",
+        "周二",
+        "周三"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T003",
+      "title": "品牌月度文案排期",
+      "type": "文案/内容创作",
+      "assignee": "刘媛卿",
+      "priority": "P2",
+      "status": "待开始",
+      "weekOf": "2026-W23",
+      "estimatedHours": 6,
+      "actualHours": 0,
+      "project": "内容日历",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "程园",
+      "notes": "",
+      "days": [
+        "周三",
+        "周四"
+      ],
+      "recurring": true
+    },
+    {
+      "id": "T004",
+      "title": "618活动场地确认",
+      "type": "活动策划",
+      "assignee": "宋麒声",
+      "priority": "P1",
+      "status": "进行中",
+      "weekOf": "2026-W23",
+      "estimatedHours": 6,
+      "actualHours": 2,
+      "project": "618大促Campaign",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "程园",
+      "notes": "",
+      "days": [
+        "周一",
+        "周二",
+        "周三"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T005",
+      "title": "会员积分活动上线",
+      "type": "会员商城运营",
+      "assignee": "赵倍",
+      "priority": "P1",
+      "status": "待开始",
+      "weekOf": "2026-W23",
+      "estimatedHours": 10,
+      "actualHours": 0,
+      "project": "会员体系",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "程园",
+      "notes": "",
+      "days": [
+        "周一",
+        "周二",
+        "周三",
+        "周四"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T006",
+      "title": "产品拍摄-防晒系列",
+      "type": "摄影摄像/视频",
+      "assignee": "耿雨阳",
+      "priority": "P1",
+      "status": "已完成",
+      "weekOf": "2026-W23",
+      "estimatedHours": 8,
+      "actualHours": 7,
+      "project": "夏季新品",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "胡瑕",
+      "notes": "",
+      "days": [
+        "周一",
+        "周二"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T007",
+      "title": "小红书周报数据整理",
+      "type": "数据分析",
+      "assignee": "李若琳",
+      "priority": "P3",
+      "status": "待开始",
+      "weekOf": "2026-W23",
+      "estimatedHours": 3,
+      "actualHours": 0,
+      "project": "自媒体运营",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "程园",
+      "notes": "",
+      "days": [
+        "周五"
+      ],
+      "recurring": true
+    },
+    {
+      "id": "T008",
+      "title": "Q3品牌策略初稿",
+      "type": "品牌战略/规划",
+      "assignee": "程园",
+      "priority": "P0",
+      "status": "进行中",
+      "weekOf": "2026-W23",
+      "estimatedHours": 10,
+      "actualHours": 4,
+      "project": "Q3战略",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "胡瑕",
+      "notes": "",
+      "days": [
+        "周二",
+        "周三",
+        "周四"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T009",
+      "title": "618活动物料设计",
+      "type": "视觉设计/KV/物料",
+      "assignee": "冯宇",
+      "priority": "P1",
+      "status": "待开始",
+      "weekOf": "2026-W23",
+      "estimatedHours": 8,
+      "actualHours": 0,
+      "project": "618大促Campaign",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "田慧慧",
+      "notes": "",
+      "days": [
+        "周三",
+        "周四",
+        "周五"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T010",
+      "title": "线下商超物料补给",
+      "type": "线下推广/执行",
+      "assignee": "饶学佳",
+      "priority": "P2",
+      "status": "进行中",
+      "weekOf": "2026-W23",
+      "estimatedHours": 6,
+      "actualHours": 2,
+      "project": "线下渠道",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "程园",
+      "notes": "",
+      "days": [
+        "周二",
+        "周三"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T011",
+      "title": "618活动志愿者协调",
+      "type": "活动策划",
+      "assignee": "李文婷",
+      "priority": "P2",
+      "status": "待开始",
+      "weekOf": "2026-W23",
+      "estimatedHours": 5,
+      "actualHours": 0,
+      "project": "618大促Campaign",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "程园",
+      "notes": "",
+      "days": [
+        "周四",
+        "周五"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T012",
+      "title": "618短视频脚本策划",
+      "type": "摄影摄像/视频",
+      "assignee": "耿雨阳",
+      "priority": "P2",
+      "status": "待开始",
+      "weekOf": "2026-W23",
+      "estimatedHours": 4,
+      "actualHours": 0,
+      "project": "618大促Campaign",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "胡瑕",
+      "notes": "",
+      "days": [
+        "周四",
+        "周五"
+      ],
+      "recurring": false
+    },
+    {
+      "id": "T013",
+      "title": "竞品618动态监测",
+      "type": "数据分析",
+      "assignee": "程园",
+      "priority": "P2",
+      "status": "待开始",
+      "weekOf": "2026-W23",
+      "estimatedHours": 4,
+      "actualHours": 0,
+      "project": "618大促Campaign",
+      "linkedKR": "",
+      "createdBy": "system",
+      "approvedBy": "胡瑕",
+      "notes": "",
+      "days": [
+        "周一",
+        "周五"
+      ],
+      "recurring": false
+    }
+  ],
+  "taskPool": [
+    {
+      "id": "TP001",
+      "title": "品牌VI手册更新",
+      "type": "视觉设计/KV/物料",
+      "priority": "P2",
+      "estimatedHours": 16,
+      "project": "品牌资产",
+      "linkedKR": "",
+      "notes": "需和品牌经理确认更新范围"
+    },
+    {
+      "id": "TP002",
+      "title": "抖音号内容矩阵规划",
+      "type": "摄影摄像/视频",
+      "priority": "P1",
+      "estimatedHours": 8,
+      "project": "自媒体运营",
+      "linkedKR": "",
+      "notes": ""
+    }
+  ],
+  "dashboardData": {
+    "kpis": {
+      "fans": {
+        "value": 2860000,
+        "unit": "万",
+        "display": "286",
+        "mom": "+3.2%",
+        "yoy": "+28.5%"
+      },
+      "exposure": {
+        "value": 15200000,
+        "unit": "万",
+        "display": "1520",
+        "mom": "+12.8%",
+        "yoy": "+45.2%"
+      },
+      "gmv": {
+        "value": 3800000,
+        "unit": "万",
+        "display": "380",
+        "mom": "+8.6%",
+        "yoy": "+32.1%"
+      },
+      "searchIndex": {
+        "value": 12500,
+        "unit": "",
+        "display": "12,500",
+        "mom": "+5.4%",
+        "yoy": "+18.7%"
+      }
+    },
+    "okrs": [
+      {
+        "objective": "提升品牌全域搜索指数至15000",
+        "progress": 83,
+        "kr": "KR1"
+      },
+      {
+        "objective": "618 Campaign GMV达成500万",
+        "progress": 76,
+        "kr": "KR2"
+      },
+      {
+        "objective": "自媒体矩阵粉丝突破300万",
+        "progress": 95,
+        "kr": "KR3"
+      },
+      {
+        "objective": "会员体系DAU提升至5000",
+        "progress": 62,
+        "kr": "KR4"
+      }
+    ],
+    "budget": {
+      "total": 1200000,
+      "used": 680000,
+      "items": [
+        {
+          "name": "KOL/达人合作",
+          "budget": 400000,
+          "used": 280000
+        },
+        {
+          "name": "线下活动/展会",
+          "budget": 300000,
+          "used": 150000
+        },
+        {
+          "name": "视觉物料制作",
+          "budget": 200000,
+          "used": 120000
+        },
+        {
+          "name": "媒介投放",
+          "budget": 200000,
+          "used": 90000
+        },
+        {
+          "name": "工具/软件",
+          "budget": 100000,
+          "used": 40000
+        }
+      ]
+    },
+    "priorities": [
+      {
+        "id": "PR001",
+        "text": "618 Campaign 主视觉终稿确认",
+        "done": false,
+        "assignee": "田慧慧"
+      },
+      {
+        "id": "PR002",
+        "text": "Q3品牌策略初稿提交经理审阅",
+        "done": false,
+        "assignee": "程园"
+      },
+      {
+        "id": "PR003",
+        "text": "抖音达人合作协议签署 (3家)",
+        "done": true,
+        "assignee": "李若琳"
+      },
+      {
+        "id": "PR004",
+        "text": "会员积分系统上线前测试",
+        "done": false,
+        "assignee": "赵倍"
+      },
+      {
+        "id": "PR005",
+        "text": "防晒系列产品拍摄完成交付",
+        "done": true,
+        "assignee": "耿雨阳"
+      }
+    ],
+    "risks": [
+      {
+        "id": "RK001",
+        "text": "618主视觉尚未定稿，影响物料排期",
+        "checked": false
+      },
+      {
+        "id": "RK002",
+        "text": "新入职员工较多 (5人)，培训进度需关注",
+        "checked": false
+      },
+      {
+        "id": "RK003",
+        "text": "KOL合作预算已用70%，需控制后续支出",
+        "checked": true
+      },
+      {
+        "id": "RK004",
+        "text": "会员系统对接IT部门排期延迟1周",
+        "checked": false
+      }
+    ],
+    "campaigns": [
+      {
+        "name": "618大促Campaign",
+        "status": "进行中",
+        "lead": "程园",
+        "deadline": "2026-06-18",
+        "progress": 45
+      },
+      {
+        "name": "夏季防晒新品上市",
+        "status": "进行中",
+        "lead": "刘媛卿",
+        "deadline": "2026-06-15",
+        "progress": 60
+      },
+      {
+        "name": "会员体系2.0上线",
+        "status": "筹备中",
+        "lead": "赵倍",
+        "deadline": "2026-07-01",
+        "progress": 25
+      },
+      {
+        "name": "品牌十周年活动",
+        "status": "策划中",
+        "lead": "宋麒声",
+        "deadline": "2026-09-15",
+        "progress": 10
+      }
+    ]
+  },
+  "currentWeek": "2026-W23",
+  "strategy": {
+    "okrs": [
+      {
+        "id": "OKR001",
+        "objective": "Q2品牌声量全面提升，搜索指数突破15000",
+        "quarter": "Q2",
+        "keyResults": [
+          {
+            "id": "KR001a",
+            "desc": "全平台搜索指数从12500提升至15000",
+            "target": 15000,
+            "current": 12500,
+            "owner": "程园"
+          },
+          {
+            "id": "KR001b",
+            "desc": "小红书品牌词搜索量环比增长30%",
+            "target": 30,
+            "current": 18,
+            "owner": "刘媛卿"
+          },
+          {
+            "id": "KR001c",
+            "desc": "抖音品牌话题播放量累计突破5000万",
+            "target": 5000,
+            "current": 3200,
+            "owner": "耿雨阳"
+          }
+        ]
+      },
+      {
+        "id": "OKR002",
+        "objective": "618大促Campaign GMV达成500万，ROI≥3",
+        "quarter": "Q2",
+        "keyResults": [
+          {
+            "id": "KR002a",
+            "desc": "618期间品牌GMV达500万元",
+            "target": 500,
+            "current": 380,
+            "owner": "胡瑕"
+          },
+          {
+            "id": "KR002b",
+            "desc": "KOL合作达人触达曝光量≥2000万",
+            "target": 2000,
+            "current": 1520,
+            "owner": "饶学佳"
+          },
+          {
+            "id": "KR002c",
+            "desc": "活动H5页面UV≥50万",
+            "target": 50,
+            "current": 28,
+            "owner": "赵倍"
+          }
+        ]
+      },
+      {
+        "id": "OKR003",
+        "objective": "自媒体矩阵粉丝总量突破300万",
+        "quarter": "Q2",
+        "keyResults": [
+          {
+            "id": "KR003a",
+            "desc": "抖音账号粉丝突破150万",
+            "target": 150,
+            "current": 143,
+            "owner": "耿雨阳"
+          },
+          {
+            "id": "KR003b",
+            "desc": "小红书账号粉丝突破80万",
+            "target": 80,
+            "current": 72,
+            "owner": "刘媛卿"
+          },
+          {
+            "id": "KR003c",
+            "desc": "视频号月均播放量提升至500万",
+            "target": 500,
+            "current": 310,
+            "owner": "李若琳"
+          }
+        ]
+      },
+      {
+        "id": "OKR004",
+        "objective": "会员体系DAU提升至5000，留存率≥60%",
+        "quarter": "Q2",
+        "keyResults": [
+          {
+            "id": "KR004a",
+            "desc": "会员商城DAU从3000提升至5000",
+            "target": 5000,
+            "current": 3100,
+            "owner": "赵倍"
+          },
+          {
+            "id": "KR004b",
+            "desc": "会员7日留存率提升至60%",
+            "target": 60,
+            "current": 44,
+            "owner": "赵倍"
+          },
+          {
+            "id": "KR004c",
+            "desc": "完成积分体系2.0上线",
+            "target": 1,
+            "current": 0,
+            "owner": "程园"
+          }
+        ]
+      }
+    ],
+    "annualStrategy": "# 2026年青蛙王子品牌推广部年度战略\n\n## 战略主题\n\"自然守护·亲子共长\" — 以儿童健康为核心，构建中国最值得信赖的婴童护肤品牌生态。\n\n## 核心战略方向\n\n### 1. 品牌声量全面升级\n聚焦全域搜索指数与社交声量，从\"知名品牌\"升级为\"首选品牌\"。重点布局小红书、抖音、视频号三端内容矩阵，以科学成分+亲子情感双线驱动内容传播。\n\n### 2. 数字化营销提效\n建立品牌私域流量池，打通会员体系与电商平台数据，实现精准人群触达与再营销。目标全年会员DAU达8000，复购率提升15个百分点。\n\n### 3. 大促节点突破\n全年重点布局618、双11、年货节三大节点Campaign，单次Campaign GMV较2025年提升30%。强化KOL生态，建立长效达人合作机制。\n\n### 4. 品牌资产沉淀\n完成品牌VI 3.0升级，统一全渠道视觉语言。发布品牌白皮书，强化\"天然·安全·科学\"品牌心智。\n\n## 年度预算规划\n全年营销预算1270万元，KOL合作占比35%，线下活动25%，数字投放20%，视觉物料15%，其他5%。\n\n## 关键里程碑\n- Q1：品牌VI升级完成，会员2.0系统上线\n- Q2：618 Campaign突破，粉丝总量300万\n- Q3：暑期亲子Campaign，双平台破亿曝光\n- Q4：双11大促，年度品牌白皮书发布",
+    "brandHouse": {
+      "vision": "成为中国妈妈最信赖的天然婴童护肤品牌，让每一个孩子在爱与自然中健康成长。",
+      "mission": "以科学配方与天然成分，为0-12岁儿童提供安全、温和、有效的肌肤守护，让父母安心，让孩子快乐。",
+      "values": "安全第一 · 天然纯净 · 科学配方 · 亲子共情 · 持续创新",
+      "personality": "温暖、活泼、值得信赖；如同一位充满爱心的儿童护理专家，既专业严谨又亲切有趣。",
+      "promise": "每一款产品都经过皮肤科医生认证，温和无刺激，让父母放心、孩子舒适。",
+      "positioning": "专注0-12岁儿童护肤，以\"天然科学\"为核心差异点，定位中高端天然婴童护肤品类领导者。"
+    }
+  },
+  "budgetData": {
+    "annual": 12700000,
+    "categories": [
+      {
+        "name": "KOL/达人合作",
+        "budget": 4445000,
+        "used": 2180000,
+        "monthPlan": 580000
+      },
+      {
+        "name": "线下活动/展会",
+        "budget": 3175000,
+        "used": 1120000,
+        "monthPlan": 420000
+      },
+      {
+        "name": "数字媒介投放",
+        "budget": 2540000,
+        "used": 980000,
+        "monthPlan": 320000
+      },
+      {
+        "name": "视觉物料制作",
+        "budget": 1905000,
+        "used": 760000,
+        "monthPlan": 180000
+      },
+      {
+        "name": "工具/软件/授权",
+        "budget": 635000,
+        "used": 210000,
+        "monthPlan": 52000
+      }
+    ],
+    "expenses": [
+      {
+        "id": "EX001",
+        "date": "2026-04-08",
+        "project": "Q2品牌声量",
+        "category": "KOL/达人合作",
+        "amount": 280000,
+        "campaign": "春季新品",
+        "vendor": "洋葱MCN",
+        "status": "已结算",
+        "notes": "头部达人×2，腰部×5"
+      },
+      {
+        "id": "EX002",
+        "date": "2026-04-15",
+        "project": "线下渠道",
+        "category": "线下活动/展会",
+        "amount": 150000,
+        "campaign": "母婴展",
+        "vendor": "上海环球珍品",
+        "status": "已结算",
+        "notes": "第28届上海孕婴童展"
+      },
+      {
+        "id": "EX003",
+        "date": "2026-05-01",
+        "project": "618大促Campaign",
+        "category": "数字媒介投放",
+        "amount": 180000,
+        "campaign": "618大促",
+        "vendor": "巨量引擎",
+        "status": "进行中",
+        "notes": "抖音信息流+搜索"
+      },
+      {
+        "id": "EX004",
+        "date": "2026-05-10",
+        "project": "618大促Campaign",
+        "category": "视觉物料制作",
+        "amount": 85000,
+        "campaign": "618大促",
+        "vendor": "尚品视觉",
+        "status": "已结算",
+        "notes": "KV主视觉+物料套装"
+      },
+      {
+        "id": "EX005",
+        "date": "2026-05-18",
+        "project": "618大促Campaign",
+        "category": "KOL/达人合作",
+        "amount": 320000,
+        "campaign": "618大促",
+        "vendor": "克劳锐",
+        "status": "进行中",
+        "notes": "618专项达人矩阵"
+      },
+      {
+        "id": "EX006",
+        "date": "2026-05-20",
+        "project": "内容日历",
+        "category": "视觉物料制作",
+        "amount": 42000,
+        "campaign": "日常运营",
+        "vendor": "内部制作",
+        "status": "已结算",
+        "notes": "5月小红书图文素材"
+      },
+      {
+        "id": "EX007",
+        "date": "2026-06-01",
+        "project": "会员体系",
+        "category": "工具/软件/授权",
+        "amount": 36000,
+        "campaign": "会员运营",
+        "vendor": "有赞科技",
+        "status": "待付款",
+        "notes": "会员系统年费"
+      },
+      {
+        "id": "EX008",
+        "date": "2026-06-02",
+        "project": "618大促Campaign",
+        "category": "线下活动/展会",
+        "amount": 280000,
+        "campaign": "618大促",
+        "vendor": "北京绿地会展",
+        "status": "待付款",
+        "notes": "618线下快闪活动"
+      }
+    ]
+  },
+  "brandAssets": {
+    "handbook": {
+      "story": "青蛙王子创立于1995年，以\"天然守护\"为使命，深耕婴童护肤赛道30年。品牌以经典蛙王卡通形象为核心IP，连续多年荣获\"中国妈妈最信赖婴童护肤品牌\"称号，产品覆盖全国30个省市，出口东南亚、中东等地区。",
+      "vision": "成为中国妈妈最信赖的天然婴童护肤品牌，让每一个孩子在爱与自然中健康成长。",
+      "mission": "以科学配方与天然成分，为0-12岁儿童提供安全、温和、有效的肌肤守护。",
+      "values": "安全第一 · 天然纯净 · 科学配方 · 亲子共情 · 持续创新",
+      "audience": "25-40岁中国城市妈妈，注重成分安全、追求品质生活，对子女健康高度关注。月收入1万以上，活跃于小红书、抖音、母婴社区。",
+      "personality": "温暖亲切、活泼有趣、专业可信。如同孩子的守护天使，既有科学的严谨，又有父母的柔情。",
+      "promise": "每款产品皮肤科医生认证，温和无刺激，0香精0酒精，给孩子最纯净的守护。"
+    },
+    "visualSpecs": [
+      {
+        "title": "主色系",
+        "content": "青蛙蓝 #5BA8D6（主色调，传递清洁与信赖）\n薄荷绿 #7FCEAB（辅助色，传递天然与活力）\n阳光黄 #F5C842（点缀色，传递温暖与快乐）\n深墨色 #0A0A0A（文字主色）"
+      },
+      {
+        "title": "Logo使用规范",
+        "content": "主Logo：蛙王卡通形象+品牌中英文字组合\n最小尺寸：印刷品不低于20mm宽；数字端不低于80px\n安全间距：Logo四周保留Logo高度的1/4作为净空区\n禁止行为：不得拉伸变形、不得修改颜色、不得添加阴影或描边"
+      },
+      {
+        "title": "字体规范",
+        "content": "标题字体：Noto Serif SC 900（中文衬线加粗，传递品质感）\n正文字体：Noto Sans SC 400（中文无衬线，保证可读性）\n英文/数字：Space Grotesk（简洁现代）\n禁止字体：方正综艺、黑体等过于商业化字体"
+      },
+      {
+        "title": "图片风格",
+        "content": "主调：自然光+真实亲子场景，避免过度修图\n色调：暖色偏白，饱和度适中，保持产品原色\n人物：真实亲子互动，多元化家庭，传递真实情感\n禁止：夸张特效、大量滤镜、医疗暗示性画面"
+      },
+      {
+        "title": "版式规范",
+        "content": "排版风格：简洁留白，内容层次清晰\n网格系统：12栏网格，间距16px基准单位\n圆角规范：卡片12px，按钮8px，标签4px\n图标风格：线性图标，统一2px描边，圆角风格"
+      }
+    ],
+    "toneGuide": {
+      "persona": "品牌声音如同一位有温度的儿童护理专家朋友——专业但不冷漠，亲切但不油腻，科学但不艰涩。说话方式：像在跟妈妈分享真实经验，而非推销产品。",
+      "dos": [
+        "使用温暖、肯定的语气：「让宝贝的皮肤喝饱水」",
+        "强调成分的天然来源和科学依据",
+        "用具体数字和认证增强可信度：「经皮肤科医生测试」",
+        "传递亲子情感共鸣：聚焦妈妈的爱与关怀",
+        "适当使用可爱、活泼的表达，与IP形象保持一致",
+        "语句简洁，避免冗长；多用短句和排比"
+      ],
+      "donts": [
+        "避免夸大功效：不使用「最好」「第一」等绝对化表述（除非有认证依据）",
+        "不暗示或明示医疗效果",
+        "避免制造焦虑：不以「你不用这个，宝宝会...」为卖点",
+        "不使用过于口语化的网络缩写（如YYDS、绝绝子等）",
+        "避免性别刻板印象，不以「男孩用/女孩用」做硬性区分",
+        "不模仿竞争对手的语言风格"
+      ],
+      "examples": [
+        {
+          "scene": "产品主推文案",
+          "text": "天然洋甘菊提取物，轻柔呵护宝宝细嫩肌肤。经皮肤科医生测试，温和如清晨第一缕阳光。"
+        },
+        {
+          "scene": "节日营销文案",
+          "text": "给宝贝最好的礼物，是妈妈用心的守护。这个六一，让青蛙王子陪伴每一刻成长时光。"
+        },
+        {
+          "scene": "成分科普内容",
+          "text": "为什么要选0酒精配方？酒精会破坏宝宝皮肤屏障，导致水分流失。我们坚持0酒精，只因宝宝值得最温柔的对待。"
+        },
+        {
+          "scene": "用户互动回复",
+          "text": "谢谢你分享宝宝的笑脸！看到这样的反馈，我们特别开心。宝宝皮肤好，妈妈心里甜～"
+        }
+      ]
+    },
+    "compliance": [
+      {
+        "id": "CK001",
+        "text": "产品宣传材料不含「最」「第一」「唯一」等极限用语（《广告法》第9条）",
+        "checked": true
+      },
+      {
+        "id": "CK002",
+        "text": "婴童产品功效说明符合《化妆品标签管理办法》，无夸大功效或误导性表述",
+        "checked": true
+      },
+      {
+        "id": "CK003",
+        "text": "所有宣传图片中儿童模特年龄与产品适用年龄段匹配，无违规暗示",
+        "checked": true
+      },
+      {
+        "id": "CK004",
+        "text": "KOL合作内容已审核，不含虚假证言或模糊效果承诺",
+        "checked": false
+      },
+      {
+        "id": "CK005",
+        "text": "产品成分表在所有渠道物料中清晰可见，无隐瞒关键成分行为",
+        "checked": true
+      },
+      {
+        "id": "CK006",
+        "text": "「皮肤科医生认证」等权威背书已有合法认证文件支撑，文件在案",
+        "checked": true
+      },
+      {
+        "id": "CK007",
+        "text": "儿童产品广告中未出现引导消费者冲动消费或不安全使用行为的内容",
+        "checked": true
+      },
+      {
+        "id": "CK008",
+        "text": "线上直播带货内容已完成合规审核（价格、功效、对比宣传）",
+        "checked": false
+      },
+      {
+        "id": "CK009",
+        "text": "新媒体内容（小红书/抖音）已在文案中标注广告/合作标识（如适用）",
+        "checked": false
+      },
+      {
+        "id": "CK010",
+        "text": "产品包装设计稿已通过法务部门审核，送审版本与量产版本一致",
+        "checked": true
+      },
+      {
+        "id": "CK011",
+        "text": "对于\"温和\"\"无刺激\"等功效宣称，已有第三方检测报告支撑",
+        "checked": true
+      },
+      {
+        "id": "CK012",
+        "text": "会员积分/促销活动规则已经过合规审查，无违反消费者权益保护法规定",
+        "checked": false
+      }
+    ],
+    "assets": [
+      {
+        "id": "BA001",
+        "name": "青蛙王子主Logo套装",
+        "type": "品牌Logo",
+        "usage": "全渠道通用",
+        "link": "#",
+        "version": "v3.0",
+        "updateDate": "2026-01-15"
+      },
+      {
+        "id": "BA002",
+        "name": "品牌VI手册 2026",
+        "type": "VI手册",
+        "usage": "设计团队/供应商",
+        "link": "#",
+        "version": "v3.0",
+        "updateDate": "2026-01-20"
+      },
+      {
+        "id": "BA003",
+        "name": "产品摄影素材库Q2",
+        "type": "图片素材",
+        "usage": "内容创作/投放",
+        "link": "#",
+        "version": "2026Q2",
+        "updateDate": "2026-05-01"
+      },
+      {
+        "id": "BA004",
+        "name": "品牌宣传片 60s",
+        "type": "视频素材",
+        "usage": "媒介投放",
+        "link": "#",
+        "version": "2026春季版",
+        "updateDate": "2026-03-10"
+      },
+      {
+        "id": "BA005",
+        "name": "IP形象蛙王表情包",
+        "type": "IP素材",
+        "usage": "社媒内容",
+        "link": "#",
+        "version": "v2.1",
+        "updateDate": "2025-12-01"
+      },
+      {
+        "id": "BA006",
+        "name": "品牌字体授权文件",
+        "type": "授权文件",
+        "usage": "设计团队",
+        "link": "#",
+        "version": "2026年度",
+        "updateDate": "2026-01-01"
+      }
+    ],
+    "docLinks": {
+      "handbook": "",
+      "visual": "",
+      "tone": "",
+      "compliance": ""
+    },
+    "userAssets": [
+      {
+        "id": "UA001",
+        "channel": "抖音",
+        "followers": 1360000,
+        "members": 0,
+        "activeUsers": 280000,
+        "gmv": 3200000,
+        "avgOrder": 128,
+        "repurchase": 18,
+        "notes": "品牌自播+达人矩阵"
+      },
+      {
+        "id": "UA002",
+        "channel": "天猫",
+        "followers": 860000,
+        "members": 520000,
+        "activeUsers": 150000,
+        "gmv": 5800000,
+        "avgOrder": 156,
+        "repurchase": 32,
+        "notes": "旗舰店会员体系"
+      },
+      {
+        "id": "UA003",
+        "channel": "小红书",
+        "followers": 910000,
+        "members": 0,
+        "activeUsers": 210000,
+        "gmv": 1200000,
+        "avgOrder": 98,
+        "repurchase": 12,
+        "notes": "种草为主，引流天猫"
+      },
+      {
+        "id": "UA004",
+        "channel": "会员商城",
+        "followers": 0,
+        "members": 185000,
+        "activeUsers": 62000,
+        "gmv": 2400000,
+        "avgOrder": 142,
+        "repurchase": 45,
+        "notes": "私域复购主阵地"
+      },
+      {
+        "id": "UA005",
+        "channel": "微信生态",
+        "followers": 298000,
+        "members": 120000,
+        "activeUsers": 48000,
+        "gmv": 980000,
+        "avgOrder": 115,
+        "repurchase": 28,
+        "notes": "公众号+小程序"
+      }
+    ]
+  },
+  "calendarItems": [
+    {
+      "id": "CL001",
+      "date": "2026-06-02",
+      "platform": "小红书",
+      "title": "夏季防晒种草笔记",
+      "type": "图文",
+      "assignee": "刘媛卿",
+      "materialStatus": "已就绪",
+      "publishStatus": "已发",
+      "campaign": "夏季防晒推广"
+    },
+    {
+      "id": "CL002",
+      "date": "2026-06-03",
+      "platform": "抖音",
+      "title": "宝宝洗澡日常vlog",
+      "type": "视频",
+      "assignee": "耿雨阳",
+      "materialStatus": "已就绪",
+      "publishStatus": "已发",
+      "campaign": ""
+    },
+    {
+      "id": "CL003",
+      "date": "2026-06-05",
+      "platform": "微信",
+      "title": "618预热推文",
+      "type": "图文",
+      "assignee": "刘媛卿",
+      "materialStatus": "制作中",
+      "publishStatus": "待发",
+      "campaign": "618大促Campaign"
+    },
+    {
+      "id": "CL004",
+      "date": "2026-06-08",
+      "platform": "小红书",
+      "title": "成分党测评",
+      "type": "图文",
+      "assignee": "李若琳",
+      "materialStatus": "待审核",
+      "publishStatus": "待发",
+      "campaign": ""
+    },
+    {
+      "id": "CL005",
+      "date": "2026-06-10",
+      "platform": "抖音",
+      "title": "618开门红直播",
+      "type": "直播",
+      "assignee": "李若琳",
+      "materialStatus": "制作中",
+      "publishStatus": "待发",
+      "campaign": "618大促Campaign"
+    },
+    {
+      "id": "CL006",
+      "date": "2026-06-12",
+      "platform": "微博",
+      "title": "明星同款话题",
+      "type": "图文",
+      "assignee": "宋麒声",
+      "materialStatus": "未开始",
+      "publishStatus": "待发",
+      "campaign": "618大促Campaign"
+    },
+    {
+      "id": "CL007",
+      "date": "2026-06-15",
+      "platform": "B站",
+      "title": "品牌纪录片",
+      "type": "视频",
+      "assignee": "耿雨阳",
+      "materialStatus": "未开始",
+      "publishStatus": "待发",
+      "campaign": ""
+    },
+    {
+      "id": "CL008",
+      "date": "2026-06-18",
+      "platform": "抖音",
+      "title": "618巅峰直播",
+      "type": "直播",
+      "assignee": "李若琳",
+      "materialStatus": "未开始",
+      "publishStatus": "待发",
+      "campaign": "618大促Campaign"
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "CP001",
+      "name": "618大促Campaign",
+      "status": "进行中",
+      "lead": "程园",
+      "startDate": "2026-05-25",
+      "endDate": "2026-06-20",
+      "totalBudget": 2000000,
+      "usedBudget": 920000,
+      "product": "全线产品",
+      "channels": [
+        {
+          "name": "抖音",
+          "budget": 800000,
+          "kpi": "GMV 200万",
+          "kpiActual": "GMV 142万",
+          "kpiStatus": "进行中"
+        },
+        {
+          "name": "小红书",
+          "budget": 500000,
+          "kpi": "曝光 3000万",
+          "kpiActual": "曝光 2100万",
+          "kpiStatus": "进行中"
+        },
+        {
+          "name": "天猫",
+          "budget": 700000,
+          "kpi": "GMV 300万",
+          "kpiActual": "GMV 188万",
+          "kpiStatus": "进行中"
+        }
+      ],
+      "milestones": [
+        {
+          "date": "2026-05-25",
+          "title": "预热启动",
+          "owner": "程园",
+          "done": true
+        },
+        {
+          "date": "2026-06-01",
+          "title": "达人内容铺量",
+          "owner": "李若琳",
+          "done": true
+        },
+        {
+          "date": "2026-06-10",
+          "title": "开门红直播",
+          "owner": "李若琳",
+          "done": false
+        },
+        {
+          "date": "2026-06-18",
+          "title": "巅峰日",
+          "owner": "程园",
+          "done": false
+        }
+      ],
+      "overall": {
+        "exposure": 18500000,
+        "interaction": 920000,
+        "uv": 520000,
+        "gmv": 7300000,
+        "conversion": 3.8,
+        "notes": "预热期数据，6.18巅峰日待补"
+      },
+      "searchData": [
+        {
+          "keyword": "青蛙王子",
+          "type": "品牌话题",
+          "searchIndex": 12500,
+          "trend": "+18%",
+          "date": "2026-06-03"
+        },
+        {
+          "keyword": "儿童防晒",
+          "type": "关键词",
+          "searchIndex": 8600,
+          "trend": "+32%",
+          "date": "2026-06-03"
+        },
+        {
+          "keyword": "青蛙王子618",
+          "type": "品牌话题",
+          "searchIndex": 4200,
+          "trend": "+120%",
+          "date": "2026-06-03"
+        }
+      ],
+      "creatives": [
+        {
+          "name": "618主视觉KV",
+          "type": "KV",
+          "version": "v2.0",
+          "status": "已上线"
+        },
+        {
+          "name": "开门红预热视频",
+          "type": "视频",
+          "version": "v1.0",
+          "status": "制作中"
+        }
+      ]
+    },
+    {
+      "id": "CP002",
+      "name": "夏季防晒新品上市",
+      "status": "进行中",
+      "lead": "刘媛卿",
+      "startDate": "2026-05-15",
+      "endDate": "2026-07-15",
+      "totalBudget": 800000,
+      "usedBudget": 280000,
+      "product": "儿童防晒系列",
+      "channels": [
+        {
+          "name": "小红书",
+          "budget": 400000,
+          "kpi": "种草笔记 200篇",
+          "kpiActual": "已发 128篇",
+          "kpiStatus": "进行中"
+        },
+        {
+          "name": "抖音",
+          "budget": 400000,
+          "kpi": "播放 5000万",
+          "kpiActual": "播放 3200万",
+          "kpiStatus": "进行中"
+        }
+      ],
+      "milestones": [
+        {
+          "date": "2026-05-15",
+          "title": "新品发布",
+          "owner": "刘媛卿",
+          "done": true
+        },
+        {
+          "date": "2026-06-01",
+          "title": "种草铺量",
+          "owner": "李若琳",
+          "done": true
+        },
+        {
+          "date": "2026-07-01",
+          "title": "转化收割",
+          "owner": "饶学佳",
+          "done": false
+        }
+      ],
+      "overall": {
+        "exposure": 5200000,
+        "interaction": 280000,
+        "uv": 160000,
+        "gmv": 1850000,
+        "conversion": 2.9,
+        "notes": ""
+      },
+      "searchData": [
+        {
+          "keyword": "儿童防晒霜",
+          "type": "关键词",
+          "searchIndex": 6800,
+          "trend": "+25%",
+          "date": "2026-06-03"
+        }
+      ],
+      "creatives": [
+        {
+          "name": "防晒KV",
+          "type": "KV",
+          "version": "v1.0",
+          "status": "已上线"
+        }
+      ]
+    },
+    {
+      "id": "CP003",
+      "name": "品牌十周年活动",
+      "status": "筹备中",
+      "lead": "宋麒声",
+      "startDate": "2026-09-01",
+      "endDate": "2026-09-30",
+      "totalBudget": 1500000,
+      "usedBudget": 50000,
+      "product": "品牌IP",
+      "channels": [
+        {
+          "name": "全渠道",
+          "budget": 1500000,
+          "kpi": "品牌声量+50%",
+          "kpiActual": "",
+          "kpiStatus": "未开始"
+        }
+      ],
+      "milestones": [
+        {
+          "date": "2026-09-01",
+          "title": "方案定稿",
+          "owner": "宋麒声",
+          "done": false
+        }
+      ],
+      "overall": {
+        "exposure": 0,
+        "interaction": 0,
+        "uv": 0,
+        "gmv": 0,
+        "conversion": 0,
+        "notes": ""
+      },
+      "searchData": [],
+      "creatives": []
+    }
+  ],
+  "events": [
+    {
+      "id": "EV001",
+      "name": "618线下快闪店",
+      "date": "2026-06-12",
+      "endDate": "2026-06-18",
+      "location": "上海·静安大悦城",
+      "type": "快闪",
+      "lead": "宋麒声",
+      "budget": 200000,
+      "usedBudget": 120000,
+      "status": "筹备中",
+      "checklist": [
+        {
+          "text": "场地租赁确认",
+          "done": true
+        },
+        {
+          "text": "美陈设计定稿",
+          "done": true
+        },
+        {
+          "text": "物料制作",
+          "done": false
+        },
+        {
+          "text": "现场人员排班",
+          "done": false
+        },
+        {
+          "text": "直播设备调试",
+          "done": false
+        }
+      ],
+      "review": {
+        "goals": "",
+        "highlights": "",
+        "improvements": "",
+        "lessons": ""
+      }
+    },
+    {
+      "id": "EV002",
+      "name": "夏季新品发布会",
+      "date": "2026-05-15",
+      "endDate": "2026-05-15",
+      "location": "杭州·西湖文化广场",
+      "type": "发布会",
+      "lead": "程园",
+      "budget": 300000,
+      "usedBudget": 285000,
+      "status": "已完成",
+      "checklist": [
+        {
+          "text": "媒体邀约",
+          "done": true
+        },
+        {
+          "text": "KOL邀请",
+          "done": true
+        },
+        {
+          "text": "现场布置",
+          "done": true
+        },
+        {
+          "text": "流程彩排",
+          "done": true
+        }
+      ],
+      "review": {
+        "goals": "品牌声量提升，新品曝光",
+        "highlights": "到场媒体30+家，全网曝光超2000万",
+        "improvements": "现场互动环节可更丰富",
+        "lessons": "提前一周锁定核心媒体效果更佳"
+      }
+    },
+    {
+      "id": "EV003",
+      "name": "母婴行业展会",
+      "date": "2026-07-20",
+      "endDate": "2026-07-23",
+      "location": "广州·广交会展馆",
+      "type": "展会",
+      "lead": "饶学佳",
+      "budget": 150000,
+      "usedBudget": 20000,
+      "status": "筹备中",
+      "checklist": [
+        {
+          "text": "展位预定",
+          "done": true
+        },
+        {
+          "text": "展台设计",
+          "done": false
+        },
+        {
+          "text": "宣传物料",
+          "done": false
+        }
+      ],
+      "review": {
+        "goals": "",
+        "highlights": "",
+        "improvements": "",
+        "lessons": ""
+      }
+    }
+  ],
+  "socialMedia": {
+    "platforms": [
+      {
+        "name": "小红书",
+        "color": "#FF2442"
+      },
+      {
+        "name": "抖音",
+        "color": "#1a1a1a"
+      },
+      {
+        "name": "微信公众号",
+        "color": "#07C160"
+      },
+      {
+        "name": "微博",
+        "color": "#FF8200"
+      },
+      {
+        "name": "B站",
+        "color": "#00A1D6"
+      }
+    ],
+    "records": [
+      {
+        "id": "SM小红书2026-04",
+        "date": "2026-04-01",
+        "platform": "小红书",
+        "followers": 820000,
+        "posts": 12,
+        "reads": 492000,
+        "plays": 738000,
+        "likes": 39360,
+        "comments": 4920,
+        "shares": 2460,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM小红书2026-05",
+        "date": "2026-05-01",
+        "platform": "小红书",
+        "followers": 860000,
+        "posts": 14,
+        "reads": 516000,
+        "plays": 774000,
+        "likes": 41280,
+        "comments": 5160,
+        "shares": 2580,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM小红书2026-06",
+        "date": "2026-06-01",
+        "platform": "小红书",
+        "followers": 910000,
+        "posts": 16,
+        "reads": 546000,
+        "plays": 819000,
+        "likes": 43680,
+        "comments": 5460,
+        "shares": 2730,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM抖音2026-04",
+        "date": "2026-04-01",
+        "platform": "抖音",
+        "followers": 1200000,
+        "posts": 12,
+        "reads": 720000,
+        "plays": 1080000,
+        "likes": 57600,
+        "comments": 7200,
+        "shares": 3600,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM抖音2026-05",
+        "date": "2026-05-01",
+        "platform": "抖音",
+        "followers": 1280000,
+        "posts": 14,
+        "reads": 768000,
+        "plays": 1152000,
+        "likes": 61440,
+        "comments": 7680,
+        "shares": 3840,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM抖音2026-06",
+        "date": "2026-06-01",
+        "platform": "抖音",
+        "followers": 1360000,
+        "posts": 16,
+        "reads": 816000,
+        "plays": 1224000,
+        "likes": 65280,
+        "comments": 8160,
+        "shares": 4080,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM微信公众号2026-04",
+        "date": "2026-04-01",
+        "platform": "微信公众号",
+        "followers": 280000,
+        "posts": 12,
+        "reads": 168000,
+        "plays": 252000,
+        "likes": 13440,
+        "comments": 1680,
+        "shares": 840,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM微信公众号2026-05",
+        "date": "2026-05-01",
+        "platform": "微信公众号",
+        "followers": 290000,
+        "posts": 14,
+        "reads": 174000,
+        "plays": 261000,
+        "likes": 13920,
+        "comments": 1740,
+        "shares": 870,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM微信公众号2026-06",
+        "date": "2026-06-01",
+        "platform": "微信公众号",
+        "followers": 298000,
+        "posts": 16,
+        "reads": 178800,
+        "plays": 268200,
+        "likes": 14304,
+        "comments": 1788,
+        "shares": 894,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM微博2026-04",
+        "date": "2026-04-01",
+        "platform": "微博",
+        "followers": 450000,
+        "posts": 12,
+        "reads": 270000,
+        "plays": 405000,
+        "likes": 21600,
+        "comments": 2700,
+        "shares": 1350,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM微博2026-05",
+        "date": "2026-05-01",
+        "platform": "微博",
+        "followers": 460000,
+        "posts": 14,
+        "reads": 276000,
+        "plays": 414000,
+        "likes": 22080,
+        "comments": 2760,
+        "shares": 1380,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SM微博2026-06",
+        "date": "2026-06-01",
+        "platform": "微博",
+        "followers": 468000,
+        "posts": 16,
+        "reads": 280800,
+        "plays": 421200,
+        "likes": 22464,
+        "comments": 2808,
+        "shares": 1404,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SMB站2026-04",
+        "date": "2026-04-01",
+        "platform": "B站",
+        "followers": 120000,
+        "posts": 12,
+        "reads": 72000,
+        "plays": 108000,
+        "likes": 5760,
+        "comments": 720,
+        "shares": 360,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SMB站2026-05",
+        "date": "2026-05-01",
+        "platform": "B站",
+        "followers": 135000,
+        "posts": 14,
+        "reads": 81000,
+        "plays": 121500,
+        "likes": 6480,
+        "comments": 810,
+        "shares": 405,
+        "engagementRate": 9.5
+      },
+      {
+        "id": "SMB站2026-06",
+        "date": "2026-06-01",
+        "platform": "B站",
+        "followers": 152000,
+        "posts": 16,
+        "reads": 91200,
+        "plays": 136800,
+        "likes": 7296,
+        "comments": 912,
+        "shares": 456,
+        "engagementRate": 9.5
+      }
+    ],
+    "hotNotes": [
+      {
+        "id": "HN001",
+        "platform": "小红书",
+        "title": "宝宝防晒怎么选？儿科医生这样说",
+        "link": "https://www.xiaohongshu.com/explore/xxxx",
+        "engagementRate": 18.6,
+        "publishDate": "2026-05-28",
+        "notes": "医生背书，转化强"
+      },
+      {
+        "id": "HN002",
+        "platform": "抖音",
+        "title": "给娃洗澡的快乐瞬间合集",
+        "link": "https://www.douyin.com/video/xxxx",
+        "engagementRate": 15.2,
+        "publishDate": "2026-06-02",
+        "notes": "情感共鸣，自然流量大"
+      },
+      {
+        "id": "HN003",
+        "platform": "小红书",
+        "title": "青蛙王子成分党测评",
+        "link": "https://www.xiaohongshu.com/explore/yyyy",
+        "engagementRate": 12.8,
+        "publishDate": "2026-06-05",
+        "notes": ""
+      }
+    ],
+    "accounts": [
+      {
+        "id": "AC001",
+        "platform": "小红书",
+        "accountName": "青蛙王子官方",
+        "username": "frogprince_official",
+        "password": "••••••",
+        "url": "https://www.xiaohongshu.com/user/profile/xxxx",
+        "notes": "主账号"
+      },
+      {
+        "id": "AC002",
+        "platform": "抖音",
+        "accountName": "青蛙王子",
+        "username": "frogprince_dy",
+        "password": "••••••",
+        "url": "https://www.douyin.com/user/xxxx",
+        "notes": ""
+      },
+      {
+        "id": "AC003",
+        "platform": "微信公众号",
+        "accountName": "青蛙王子亲子",
+        "username": "frogprince_wx",
+        "password": "••••••",
+        "url": "https://mp.weixin.qq.com/xxxx",
+        "notes": "内容运营：刘媛卿"
+      }
+    ]
+  },
+  "kolData": {
+    "kols": [
+      {
+        "id": "K001",
+        "name": "美美妈日常",
+        "platform": "小红书",
+        "followers": 580000,
+        "field": "母婴",
+        "contact": "微信:meimeimaa",
+        "mcn": "星辰传媒",
+        "pricePhoto": 8000,
+        "priceVideo": 15000,
+        "priceLive": 30000,
+        "engagementRate": 6.8,
+        "level": "S",
+        "score": 4.5,
+        "blacklisted": false,
+        "blacklistReason": ""
+      },
+      {
+        "id": "K002",
+        "name": "萌宝成长记",
+        "platform": "抖音",
+        "followers": 1200000,
+        "field": "母婴/育儿",
+        "contact": "微信:mengbao88",
+        "mcn": "蜂群文化",
+        "pricePhoto": 12000,
+        "priceVideo": 25000,
+        "priceLive": 50000,
+        "engagementRate": 5.2,
+        "level": "S",
+        "score": 4.2,
+        "blacklisted": false,
+        "blacklistReason": ""
+      },
+      {
+        "id": "K003",
+        "name": "成分实验室",
+        "platform": "小红书",
+        "followers": 320000,
+        "field": "成分测评",
+        "contact": "微信:chengfen",
+        "mcn": "",
+        "pricePhoto": 5000,
+        "priceVideo": 10000,
+        "priceLive": 0,
+        "engagementRate": 8.1,
+        "level": "A",
+        "score": 4.8,
+        "blacklisted": false,
+        "blacklistReason": ""
+      },
+      {
+        "id": "K004",
+        "name": "奶爸说育儿",
+        "platform": "抖音",
+        "followers": 450000,
+        "field": "育儿",
+        "contact": "微信:naiba",
+        "mcn": "无忧传媒",
+        "pricePhoto": 6000,
+        "priceVideo": 12000,
+        "priceLive": 20000,
+        "engagementRate": 4.5,
+        "level": "A",
+        "score": 3.9,
+        "blacklisted": false,
+        "blacklistReason": ""
+      },
+      {
+        "id": "K005",
+        "name": "宝妈优选",
+        "platform": "微博",
+        "followers": 280000,
+        "field": "母婴好物",
+        "contact": "微信:baomayx",
+        "mcn": "",
+        "pricePhoto": 3000,
+        "priceVideo": 6000,
+        "priceLive": 0,
+        "engagementRate": 3.2,
+        "level": "B",
+        "score": 3.5,
+        "blacklisted": false,
+        "blacklistReason": ""
+      },
+      {
+        "id": "K006",
+        "name": "快乐育儿日记",
+        "platform": "B站",
+        "followers": 180000,
+        "field": "育儿vlog",
+        "contact": "微信:klyuer",
+        "mcn": "",
+        "pricePhoto": 2000,
+        "priceVideo": 8000,
+        "priceLive": 0,
+        "engagementRate": 7.5,
+        "level": "A",
+        "score": 4.3,
+        "blacklisted": false,
+        "blacklistReason": ""
+      }
+    ],
+    "projects": [
+      {
+        "id": "KP001",
+        "name": "618防晒种草",
+        "product": "儿童防晒系列",
+        "startDate": "2026-05-20",
+        "endDate": "2026-06-18",
+        "lead": "李若琳",
+        "budget": 300000,
+        "usedBudget": 145000,
+        "target": "种草笔记100篇,ROI≥3",
+        "collaborations": [
+          {
+            "kolId": "K001",
+            "kolName": "美美妈日常",
+            "type": "视频",
+            "fee": 15000,
+            "exposure": 850000,
+            "interaction": 58000,
+            "conversion": 62000,
+            "cpe": 0.26,
+            "roi": 4.13,
+            "status": "已完成",
+            "publishDate": "2026-05-25",
+            "publishLink": "https://www.xiaohongshu.com/explore/aaaa",
+            "isHot": true
+          },
+          {
+            "kolId": "K003",
+            "kolName": "成分实验室",
+            "type": "图文",
+            "fee": 5000,
+            "exposure": 320000,
+            "interaction": 26000,
+            "conversion": 18000,
+            "cpe": 0.19,
+            "roi": 3.6,
+            "status": "已完成",
+            "publishDate": "2026-05-27",
+            "publishLink": "https://www.xiaohongshu.com/explore/bbbb",
+            "isHot": false
+          },
+          {
+            "kolId": "K002",
+            "kolName": "萌宝成长记",
+            "type": "视频",
+            "fee": 25000,
+            "exposure": 1200000,
+            "interaction": 62000,
+            "conversion": 0,
+            "cpe": 0,
+            "roi": 0,
+            "status": "进行中",
+            "publishDate": "",
+            "publishLink": "",
+            "isHot": false
+          }
+        ]
+      },
+      {
+        "id": "KP002",
+        "name": "夏季洗护种草",
+        "product": "植萃洗护系列",
+        "startDate": "2026-06-01",
+        "endDate": "2026-06-30",
+        "lead": "李若琳",
+        "budget": 200000,
+        "usedBudget": 0,
+        "target": "曝光500万",
+        "collaborations": []
+      }
+    ],
+    "annualKPI": [
+      {
+        "name": "年度种草GMV",
+        "target": 5000000,
+        "actual": 1850000,
+        "unit": "元"
+      },
+      {
+        "name": "年度合作达人数",
+        "target": 120,
+        "actual": 42,
+        "unit": "人"
+      },
+      {
+        "name": "年度种草笔记数",
+        "target": 600,
+        "actual": 236,
+        "unit": "篇"
+      },
+      {
+        "name": "年度爆文数(互动>均值3x)",
+        "target": 60,
+        "actual": 23,
+        "unit": "篇"
+      },
+      {
+        "name": "年度整体ROI",
+        "target": 3,
+        "actual": 3.4,
+        "unit": ""
+      }
+    ]
+  },
+  "crossDeptRequests": [
+    {
+      "id": "CD001",
+      "department": "产品部",
+      "type": "设计",
+      "description": "新品详情页设计 (防晒霜)",
+      "expectedDate": "2026-06-10",
+      "priority": "P0",
+      "status": "待处理",
+      "assignee": "",
+      "progress": 0,
+      "actualDate": "",
+      "rating": 0,
+      "feedback": "",
+      "createdDate": "2026-06-01"
+    },
+    {
+      "id": "CD002",
+      "department": "销售部",
+      "type": "设计",
+      "description": "门店促销海报 (618版)",
+      "expectedDate": "2026-06-08",
+      "priority": "P1",
+      "status": "待处理",
+      "assignee": "",
+      "progress": 0,
+      "actualDate": "",
+      "rating": 0,
+      "feedback": "",
+      "createdDate": "2026-06-02"
+    },
+    {
+      "id": "CD003",
+      "department": "电商部",
+      "type": "设计",
+      "description": "618主图更新 (5个SKU)",
+      "expectedDate": "2026-06-09",
+      "priority": "P1",
+      "status": "进行中",
+      "assignee": "冯宇",
+      "progress": 60,
+      "actualDate": "",
+      "rating": 0,
+      "feedback": "",
+      "createdDate": "2026-05-30"
+    },
+    {
+      "id": "CD004",
+      "department": "市场部",
+      "type": "文案",
+      "description": "品牌slogan征集文案",
+      "expectedDate": "2026-06-15",
+      "priority": "P2",
+      "status": "进行中",
+      "assignee": "刘媛卿",
+      "progress": 30,
+      "actualDate": "",
+      "rating": 0,
+      "feedback": "",
+      "createdDate": "2026-06-01"
+    },
+    {
+      "id": "CD005",
+      "department": "销售部",
+      "type": "拍摄",
+      "description": "渠道培训物料拍摄",
+      "expectedDate": "2026-05-28",
+      "priority": "P2",
+      "status": "已完成",
+      "assignee": "耿雨阳",
+      "progress": 100,
+      "actualDate": "2026-05-27",
+      "rating": 5,
+      "feedback": "交付及时，质量很好",
+      "createdDate": "2026-05-20"
+    },
+    {
+      "id": "CD006",
+      "department": "人力部",
+      "type": "设计",
+      "description": "招聘海报设计",
+      "expectedDate": "2026-05-25",
+      "priority": "P3",
+      "status": "已完成",
+      "assignee": "冯宇",
+      "progress": 100,
+      "actualDate": "2026-05-24",
+      "rating": 4,
+      "feedback": "符合预期",
+      "createdDate": "2026-05-18"
+    }
+  ],
+  "consumerData": {
+    "personas": [
+      {
+        "id": "P001",
+        "name": "都市新手妈妈",
+        "ageRange": "25-35岁",
+        "cities": "一线/新一线城市",
+        "concerns": [
+          "安全无添加",
+          "成分透明",
+          "宝宝肤质敏感"
+        ],
+        "channels": [
+          "小红书",
+          "抖音",
+          "母婴垂类APP"
+        ],
+        "painPoints": "担心刺激成分，配方不透明，价格敏感但愿意为安全溢价",
+        "motivation": "给宝宝最天然温和的护理体验，希望获得专业育儿背书",
+        "avatar": "👩"
+      },
+      {
+        "id": "P002",
+        "name": "精致育儿达人",
+        "ageRange": "28-40岁",
+        "cities": "全国一二线城市",
+        "concerns": [
+          "品牌口碑",
+          "成分研究",
+          "儿科认证"
+        ],
+        "channels": [
+          "小红书",
+          "微信社群",
+          "B站"
+        ],
+        "painPoints": "市场品牌繁多，难以辨别专业与营销，希望看到真实评测",
+        "motivation": "成为圈子里的育儿意见领袖，分享真实可信的品牌体验",
+        "avatar": "👸"
+      }
+    ],
+    "surveys": [
+      {
+        "id": "S001",
+        "title": "2026年春季消费者满意度调研",
+        "date": "2026-04-15",
+        "method": "在线问卷",
+        "findings": "整体满意度82%，洗护类NPS最高；包装设计认可度较去年提升15%；价格承受力调研显示60%用户接受客单价80-120元",
+        "actions": "优化护肤品系列包装；推出育儿专家联名背书内容",
+        "link": ""
+      },
+      {
+        "id": "S002",
+        "title": "品牌认知度焦点访谈",
+        "date": "2026-03-20",
+        "method": "线下焦点小组",
+        "findings": "品牌\"天然温和\"认知度68%，较竞品领先约12个百分点；口腔护理系列渗透率低，需加强消费者教育",
+        "actions": "加大口腔系列内容投入；与儿科医生合作背书",
+        "link": ""
+      },
+      {
+        "id": "S003",
+        "title": "618用户购买意向调研",
+        "date": "2026-05-10",
+        "method": "用户访谈+问卷",
+        "findings": "79%用户有618购买计划，主推品类为洗护套装；到达路径：小红书>抖音>天猫搜索",
+        "actions": "加大小红书KOL投入；提前布局天猫直通车关键词",
+        "link": ""
+      }
+    ],
+    "nps": [
+      {
+        "month": "2026-03",
+        "overall": 42,
+        "byProduct": {
+          "洗护": 48,
+          "护肤": 38,
+          "口腔": 32
+        }
+      },
+      {
+        "month": "2026-04",
+        "overall": 45,
+        "byProduct": {
+          "洗护": 51,
+          "护肤": 41,
+          "口腔": 35
+        }
+      },
+      {
+        "month": "2026-05",
+        "overall": 49,
+        "byProduct": {
+          "洗护": 55,
+          "护肤": 44,
+          "口腔": 38
+        }
+      }
+    ],
+    "reviews": [
+      {
+        "id": "R001",
+        "source": "小红书",
+        "content": "洗发水真的超温和，宝宝用完不哭！香味也好闻，强推！",
+        "sentiment": "正面",
+        "status": "已感谢",
+        "date": "2026-05-18"
+      },
+      {
+        "id": "R002",
+        "source": "天猫",
+        "content": "包装比较简单，但产品本身还不错，宝宝皮肤没有过敏",
+        "sentiment": "中性",
+        "status": "已回复",
+        "date": "2026-05-20"
+      },
+      {
+        "id": "R003",
+        "source": "抖音",
+        "content": "用了一周护肤霜，感觉没什么效果，价格也不便宜",
+        "sentiment": "负面",
+        "status": "处理中",
+        "date": "2026-05-22"
+      },
+      {
+        "id": "R004",
+        "source": "京东",
+        "content": "儿童牙膏口味孩子很喜欢，而且不含氟宝妈放心，会回购",
+        "sentiment": "正面",
+        "status": "已感谢",
+        "date": "2026-05-25"
+      }
+    ]
+  },
+  "vendors": [
+    {
+      "id": "V001",
+      "name": "上海锦联广告有限公司",
+      "categories": [
+        "视觉设计",
+        "印刷制作"
+      ],
+      "contact": "陈经理",
+      "phone": "13800001111",
+      "email": "chen@jinlian.com",
+      "rating": 4.5,
+      "projects": [
+        {
+          "name": "618主视觉物料",
+          "date": "2026-05-01",
+          "amount": 85000,
+          "rating": 4.5
+        },
+        {
+          "name": "春节包装设计",
+          "date": "2026-01-15",
+          "amount": 62000,
+          "rating": 4.8
+        }
+      ],
+      "contracts": [
+        {
+          "number": "CT2026-001",
+          "amount": 150000,
+          "startDate": "2026-01-01",
+          "endDate": "2026-12-31"
+        }
+      ],
+      "blacklisted": false,
+      "blacklistReason": ""
+    },
+    {
+      "id": "V002",
+      "name": "北京星橙文化传媒",
+      "categories": [
+        "KOL合作",
+        "内容制作"
+      ],
+      "contact": "李总监",
+      "phone": "13900002222",
+      "email": "li@xingorange.com",
+      "rating": 4.2,
+      "projects": [
+        {
+          "name": "小红书KOL种草",
+          "date": "2026-04-10",
+          "amount": 120000,
+          "rating": 4
+        },
+        {
+          "name": "抖音达人合作",
+          "date": "2026-03-01",
+          "amount": 95000,
+          "rating": 4.5
+        }
+      ],
+      "contracts": [
+        {
+          "number": "CT2026-003",
+          "amount": 250000,
+          "startDate": "2026-03-01",
+          "endDate": "2026-08-31"
+        }
+      ],
+      "blacklisted": false,
+      "blacklistReason": ""
+    },
+    {
+      "id": "V003",
+      "name": "广州卓展展览服务",
+      "categories": [
+        "展会搭建",
+        "活动执行"
+      ],
+      "contact": "张主任",
+      "phone": "13700003333",
+      "email": "zhang@zhuozhan.com",
+      "rating": 3.8,
+      "projects": [
+        {
+          "name": "广州母婴展搭建",
+          "date": "2026-04-20",
+          "amount": 180000,
+          "rating": 3.8
+        }
+      ],
+      "contracts": [
+        {
+          "number": "CT2026-005",
+          "amount": 180000,
+          "startDate": "2026-04-01",
+          "endDate": "2026-04-30"
+        }
+      ],
+      "blacklisted": false,
+      "blacklistReason": ""
+    },
+    {
+      "id": "V004",
+      "name": "成都飞扬摄影工作室",
+      "categories": [
+        "摄影摄像",
+        "视频制作"
+      ],
+      "contact": "王导演",
+      "phone": "13600004444",
+      "email": "wang@feiyangphoto.com",
+      "rating": 4.8,
+      "projects": [
+        {
+          "name": "防晒系列产品拍摄",
+          "date": "2026-05-10",
+          "amount": 45000,
+          "rating": 5
+        },
+        {
+          "name": "品牌形象大片",
+          "date": "2026-02-20",
+          "amount": 68000,
+          "rating": 4.5
+        }
+      ],
+      "contracts": [
+        {
+          "number": "CT2026-007",
+          "amount": 120000,
+          "startDate": "2026-02-01",
+          "endDate": "2026-12-31"
+        }
+      ],
+      "blacklisted": false,
+      "blacklistReason": ""
+    },
+    {
+      "id": "V005",
+      "name": "深圳问题供应商",
+      "categories": [
+        "印刷制作"
+      ],
+      "contact": "周老板",
+      "phone": "13500005555",
+      "email": "zhou@wenti.com",
+      "rating": 1.5,
+      "projects": [
+        {
+          "name": "贴纸印刷",
+          "date": "2025-12-01",
+          "amount": 8000,
+          "rating": 1.5
+        }
+      ],
+      "contracts": [],
+      "blacklisted": true,
+      "blacklistReason": "交货严重延迟，质量不达标，沟通态度差，经两次整改仍未改善"
+    }
+  ],
+  "analyticsData": {
+    "competitors": [
+      {
+        "id": "C001",
+        "name": "启初",
+        "position": "中高端母婴护肤",
+        "priceRange": "60-180元",
+        "products": "洗护/护肤套装、面霜、精华",
+        "socialLayout": "小红书主阵地，抖音辅助",
+        "dynamics": [
+          {
+            "date": "2026-05-10",
+            "content": "发布\"零添加\"新品系列，KOL密集种草",
+            "response": "监测中，考虑差异化内容反制"
+          },
+          {
+            "date": "2026-04-01",
+            "content": "618预热开始，投放母婴达人50+",
+            "response": "加大自有KOL合作，强化\"儿科认证\"差异点"
+          }
+        ]
+      },
+      {
+        "id": "C002",
+        "name": "戴可思",
+        "position": "敏感肌婴童护肤",
+        "priceRange": "80-200元",
+        "products": "护肤/洗护/防晒",
+        "socialLayout": "小红书+抖音双轨，配方透明化营销",
+        "dynamics": [
+          {
+            "date": "2026-05-20",
+            "content": "上线成分解析系列内容，专业背书强",
+            "response": "跟进配方透明化内容策略"
+          },
+          {
+            "date": "2026-03-15",
+            "content": "与多位皮肤科医生KOL合作",
+            "response": "积极接洽儿科专家背书合作"
+          }
+        ]
+      },
+      {
+        "id": "C003",
+        "name": "珂润（儿童线）",
+        "position": "日系温和婴童护肤",
+        "priceRange": "70-160元",
+        "products": "洗护/护肤/防晒",
+        "socialLayout": "天猫品牌旗舰店为核心，小红书辅助",
+        "dynamics": [
+          {
+            "date": "2026-04-25",
+            "content": "618预售开始，满减力度大",
+            "response": "差异化从\"国产品牌本土化\"角度切入"
+          },
+          {
+            "date": "2026-02-10",
+            "content": "春节礼盒上市，礼品定位明确",
+            "response": "参考礼盒包装策略，策划自有节日套装"
+          }
+        ]
+      }
+    ],
+    "brandMetrics": [
+      {
+        "month": "2026-01",
+        "searchIndex": 9200,
+        "volume": 1850000,
+        "sov": 18.5
+      },
+      {
+        "month": "2026-02",
+        "searchIndex": 9800,
+        "volume": 2100000,
+        "sov": 19.2
+      },
+      {
+        "month": "2026-03",
+        "searchIndex": 10500,
+        "volume": 2380000,
+        "sov": 20.1
+      },
+      {
+        "month": "2026-04",
+        "searchIndex": 11200,
+        "volume": 2650000,
+        "sov": 21.3
+      },
+      {
+        "month": "2026-05",
+        "searchIndex": 12500,
+        "volume": 2980000,
+        "sov": 22.8
+      },
+      {
+        "month": "2026-06",
+        "searchIndex": 13100,
+        "volume": 3200000,
+        "sov": 23.5
+      }
+    ],
+    "channelROI": [
+      {
+        "channel": "小红书KOL",
+        "investment": 280000,
+        "revenue": 1120000,
+        "roi": 300
+      },
+      {
+        "channel": "抖音达人",
+        "investment": 150000,
+        "revenue": 510000,
+        "roi": 240
+      },
+      {
+        "channel": "天猫直通车",
+        "investment": 90000,
+        "revenue": 324000,
+        "roi": 260
+      },
+      {
+        "channel": "线下展会",
+        "investment": 180000,
+        "revenue": 396000,
+        "roi": 120
+      },
+      {
+        "channel": "微信社群",
+        "investment": 40000,
+        "revenue": 168000,
+        "roi": 320
+      }
+    ]
+  },
+  "reportsData": {
+    "reports": [
+      {
+        "id": "RPT001",
+        "type": "周报",
+        "period": "2026-W22",
+        "title": "品牌推广部第22周工作周报",
+        "content": "【本周完成】\n1. 618主视觉KV初稿完成，已提交品牌经理审阅\n2. 抖音达人合作协议签署3家，预计6月10日开始投放\n3. 防晒系列产品拍摄完成，素材已交付设计团队\n\n【数据表现】\n- 小红书本周新增粉丝 +2,340，笔记互动率3.8%\n- 抖音账号播放量 128万，同比上周 +12%\n\n【下周计划】\n1. 618主视觉终稿确认\n2. 会员积分活动上线\n3. Q3品牌策略初稿提交",
+        "createdDate": "2026-06-01",
+        "status": "已发布"
+      },
+      {
+        "id": "RPT002",
+        "type": "月报",
+        "period": "2026-05",
+        "title": "2026年5月品牌推广部月度工作报告",
+        "content": "【月度核心成果】\n1. 全平台粉丝达286万，环比增长3.2%\n2. 品牌搜索指数月均12,500，同比提升18.7%\n3. 5月GMV完成380万，月度目标达成率95%\n\n【重点项目进展】\n- 618大促Campaign已启动，整体推进至45%\n- 夏季防晒新品上市内容已完成60%\n- 会员体系2.0研发中，预计7月上线\n\n【预算执行】\n- 月度预算100万，已执行56.7万 (56.7%)\n- KOL合作超支预警，下月需控制支出\n\n【下月重点】\n618大促冲刺、防晒新品全面推广、Q3策略定稿",
+        "createdDate": "2026-06-01",
+        "status": "已发布"
+      }
+    ],
+    "reviews": [
+      {
+        "id": "REV001",
+        "projectName": "2026年五一假期品牌活动",
+        "projectType": "线下活动",
+        "content": {
+          "goalReview": "活动目标：触达母婴消费者5000+，收集新会员300人。实际：触达4,800人（96%），新会员322人（107.3%），整体超额完成目标。",
+          "dataAnalysis": "活动高峰期为假期第2-3天，下午14:00-17:00客流最密集。互动区参与率78%，品牌拍照区分享率42%，显著带动线上搜索指数提升。",
+          "successFactors": "1. 选址商场客流量大，目标客群精准\n2. 儿科专家现场咨询引流效果显著\n3. 团队分工明确，执行流畅",
+          "improvePlan": "1. 现场Wi-Fi稳定性需提前确认\n2. 礼品数量准备略少，建议下次多备20%\n3. 活动物料提前2周到场布置",
+          "lessons": "大型节假日活动须提前60天启动筹备，供应商要有备选方案，现场要有专人负责舆情监控"
+        },
+        "createdDate": "2026-05-10"
+      }
+    ]
+  },
+  "_publishedVersion": 1780544017431
+}
