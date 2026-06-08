@@ -1928,6 +1928,8 @@ function normalizeEmployees(){
     if(!e.status) e.status = '在岗';
     if(typeof e.yearsInRole !== 'number') e.yearsInRole = parseFloat(e.yearsInRole) || 1;
     if(!e.group) e.group = '/';
+    if(!e.monthlyPerf || typeof e.monthlyPerf !== 'object') e.monthlyPerf = {};
+    syncQuarterPerf(e); // #2 非经理：用月度绩效近3月平均回填季度绩效
   });
 }
 
@@ -1941,7 +1943,36 @@ function avgPosition(emp){
 }
 
 function activeEmployees(){
-  return State.data.employees.filter(e => e.status !== '空缺');
+  return State.data.employees.filter(e => e.status !== '空缺' && e.status !== '离职');
+}
+// #1 用工阶段：经理/转正(在岗)/试用期
+function isManager(e){ return e.position === '品牌经理' || e.name === '胡瑕'; }
+function isProbation(e){ return e.status === '试用期'; }
+function regularEmployees(){ return activeEmployees().filter(e=>!isProbation(e)); }   // 转正(含经理)
+function probationEmployees(){ return activeEmployees().filter(isProbation); }        // 试用期
+
+// #2 季度绩效：经理用单一绩效值；其他取月度绩效近3月平均，无月度数据则回退 personal.绩效
+function quarterPerf(e){
+  if(isManager(e)) return e.personal && e.personal['绩效'] || 0;
+  const mp = e.monthlyPerf || {};
+  const recent = Object.keys(mp).sort().slice(-3).map(m=>Number(mp[m])||0).filter(v=>v>0);
+  if(recent.length) return avg(recent);
+  return e.personal && e.personal['绩效'] || 0;
+}
+// 把季度绩效同步回 personal.绩效，保证雷达/均值一致（非经理且有月度数据时）
+function syncQuarterPerf(e){
+  if(!isManager(e) && e.monthlyPerf && Object.keys(e.monthlyPerf).length){
+    if(!e.personal) e.personal = {};
+    e.personal['绩效'] = +quarterPerf(e).toFixed(1);
+  }
+}
+
+// #4/#5 把保存在 data 里的可编辑配置覆盖应用到常量（const 对象可改属性）
+function applyTalentConfigOverrides(){
+  const d = State.data; if(!d) return;
+  if(d.positionTargets) for(const p in d.positionTargets){ if(POSITION_TARGETS[p]) Object.assign(POSITION_TARGETS[p], d.positionTargets[p]); }
+  if(d.positionLevels)  for(const p in d.positionLevels){ if(POSITION_LEVEL_CRITERIA[p]) Object.assign(POSITION_LEVEL_CRITERIA[p], d.positionLevels[p]); }
+  if(Array.isArray(d.scoreBands)) d.scoreBands.forEach((b,i)=>{ if(SCORE_BANDS[i]) Object.assign(SCORE_BANDS[i], b); });
 }
 function vacantEmployees(){
   return State.data.employees.filter(e => e.status === '空缺');
@@ -2687,6 +2718,7 @@ function assignFromPool(poolId, assigneeName){
  * ============================================================ */
 
 function renderTalentModule(){
+  applyTalentConfigOverrides(); // #4/#5 应用可编辑的目标值/级别/量表覆盖
   const subViews = [
     { id:'talent-overview', label:'部门概览' },
     { id:'talent-portrait', label:'员工画像' },
@@ -2750,7 +2782,7 @@ function talentOverviewHTML(){
 
   return `
     <div class="grid grid-4" style="margin-bottom:28px;">
-      <div class="stat"><div class="stat-deco"></div><div class="stat-label">在岗人数</div><div class="stat-value">${active.length}<span class="stat-suffix">人</span></div><div class="stat-foot">全员到岗</div></div>
+      <div class="stat"><div class="stat-deco"></div><div class="stat-label">在岗人数</div><div class="stat-value">${active.length}<span class="stat-suffix">人</span></div><div class="stat-foot">转正 ${regularEmployees().length} · 试用期 ${probationEmployees().length}</div></div>
       <div class="stat accent"><div class="stat-deco"></div><div class="stat-label">综合能力均值</div><div class="stat-value">${fmt((teamP+teamQ)/2)}<span class="stat-suffix">/ 10</span></div><div class="stat-foot">个人 ${fmt(teamP)} · 岗位 ${fmt(teamQ)}</div></div>
       <div class="stat warn"><div class="stat-deco"></div><div class="stat-label">高潜人才</div><div class="stat-value">${highPot.length}<span class="stat-suffix">人</span></div><div class="stat-foot">${highPot.map(e=>e.name).join('、')||'暂无'}</div></div>
       <div class="stat"><div class="stat-deco"></div><div class="stat-label">岗位覆盖</div><div class="stat-value">${new Set(active.map(e=>e.position)).size}<span class="stat-suffix">/ ${POSITIONS.length}</span></div><div class="stat-foot">岗位种类数</div></div>
@@ -2778,8 +2810,11 @@ function talentRulesHTML(){
   return `
     <div class="notice"><span class="notice-icon">⚙</span><div><strong>评估周期 · 季度 + 年度。</strong> 季度由直属上级 + 1名平级 + 1名跨部门 = 3方打分，去最高最低取中位。</div></div>
     <div class="card elevated" style="margin-bottom:24px;">
-      <div class="card-title">评分四级量表</div>
-      <div class="criteria">${SCORE_BANDS.map(b => `<div class="crit-cell ${b.level}"><div class="crit-range">${b.range}</div><div class="crit-name">${b.label}</div><div class="crit-desc">${b.desc}</div></div>`).join('')}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" style="margin:0;">评分四级量表 · 个人能力分数范围说明</div>
+        <button class="btn-sm ghost" onclick="editScoreBands()">编辑</button>
+      </div>
+      <div class="criteria" style="margin-top:14px;">${SCORE_BANDS.map(b => `<div class="crit-cell ${b.level}"><div class="crit-range">${b.range}</div><div class="crit-name">${b.label}</div><div class="crit-desc">${b.desc}</div></div>`).join('')}</div>
     </div>
     <div class="card elevated" style="margin-bottom:24px;">
       <div class="card-title">个人能力维度 (7维)</div>
@@ -2911,7 +2946,8 @@ function talentPositionHTML(){
   });
   // 接近/超过目标(达标≥6维 或 综合≥目标98%)→晋升候选；达标≤2维 或 综合≤目标80%→淘汰预警
   const promote = assess.filter(a=>a.metDims>=6 || a.ratio>=0.98).sort((x,y)=>y.ratio-x.ratio);
-  const eliminate = assess.filter(a=>a.metDims<=2 || a.ratio<=0.80).sort((x,y)=>x.ratio-y.ratio);
+  // 试用期员工不进入淘汰预警（尚在考察期）
+  const eliminate = assess.filter(a=>!isProbation(a.e) && (a.metDims<=2 || a.ratio<=0.80)).sort((x,y)=>x.ratio-y.ratio);
   const chip = a => `<span class="pill ${a.ratio>=0.98?'mint':a.ratio<=0.8?'risk':'gray'}" style="margin:3px 6px 3px 0;display:inline-block;">${a.e.name} · ${a.e.position} <span class="num">(达标${a.metDims}/7 · ${Math.round(a.ratio*100)}%)</span></span>`;
   return `
     <div class="grid grid-2" style="margin-bottom:24px;">
@@ -2930,7 +2966,7 @@ function talentPositionHTML(){
     ${POSITIONS.map((p,idx) => {
       const t = POSITION_TARGETS[p]; if(!t) return '';
       const holders = active.filter(e=>e.position===p);
-      return `<div class="pos-card"><div class="pos-head"><div><div class="pos-name">${p} <span class="level-badge ${t.level}" style="margin-left:8px;">${t.level}</span></div><div class="pos-sub">${t.desc}</div></div><div style="text-align:right;"><div style="font-size:11px;color:var(--muted);">在岗</div><div style="font-size:14px;font-weight:700;margin-top:3px;">${holders.length?holders.map(h=>h.name).join(' · '):'<span style="color:var(--risk);">无</span>'}</div></div></div>
+      return `<div class="pos-card"><div class="pos-head"><div><div class="pos-name">${p} <span class="level-badge ${t.level}" style="margin-left:8px;">${t.level}</span></div><div class="pos-sub">${t.desc}</div></div><div style="text-align:right;"><div style="font-size:11px;color:var(--muted);">在岗</div><div style="font-size:14px;font-weight:700;margin-top:3px;">${holders.length?holders.map(h=>h.name).join(' · '):'<span style="color:var(--risk);">无</span>'}</div><button class="btn-sm ghost" style="margin-top:6px;" onclick="editPositionConfig('${p.replace(/'/g,"\\'")}')">编辑目标/级别</button></div></div>
       <div class="grid grid-2" style="gap:24px;"><div>
         <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2px;margin-bottom:14px;">7维目标</div>
         <div class="pos-grid">${POSITION_DIMS.map(d=>`<div class="pos-dim"><div class="pos-dim-label">${d}</div><div class="pos-dim-val">${t[d]}<span class="sm">/10</span></div></div>`).join('')}</div>
@@ -2940,6 +2976,64 @@ function talentPositionHTML(){
     }).join('')}
   `;
 }
+
+/* #4 编辑岗位目标值 + 等级标准 */
+function editPositionConfig(p){
+  applyTalentConfigOverrides();
+  const t = POSITION_TARGETS[p]; if(!t){ alert('该岗位无目标模板'); return; }
+  const lv = POSITION_LEVEL_CRITERIA[p] || {};
+  $('#modalGenericTitle').textContent = '编辑岗位目标/级别 · ' + p;
+  $('#modalGenericSub').textContent = 'POSITION CONFIG';
+  $('#modalGenericBody').innerHTML = `
+    <div class="form-group"><label>岗位等级</label><select class="select" id="pc_level" style="width:100%">${['L1','L2','L3','L4'].map(l=>`<option value="${l}" ${l===t.level?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="form-section-title">7维目标值 (0-10)</div>
+    <div class="grid grid-2">${POSITION_DIMS.map(d=>`<div class="form-group"><label>${d}</label><input class="input" type="number" min="0" max="10" step="0.5" id="pc_t_${d}" value="${t[d]!=null?t[d]:7}"></div>`).join('')}</div>
+    <div class="form-section-title">等级标准说明</div>
+    ${['L1','L2','L3','L4'].map(l=>`<div class="form-group"><label>${l}</label><input class="input" id="pc_lv_${l}" value="${(lv[l]||'').replace(/"/g,'&quot;')}" style="width:100%"></div>`).join('')}
+  `;
+  $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="savePositionConfig('${p.replace(/'/g,"\\'")}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
+  openModal('modalGeneric');
+}
+function savePositionConfig(p){
+  const tgt = { level:$('#pc_level').value };
+  POSITION_DIMS.forEach(d=>{ tgt[d] = Number($('#pc_t_'+d).value)||0; });
+  const lv = {}; ['L1','L2','L3','L4'].forEach(l=>{ lv[l] = $('#pc_lv_'+l).value.trim(); });
+  Object.assign(POSITION_TARGETS[p], tgt);
+  if(!POSITION_LEVEL_CRITERIA[p]) POSITION_LEVEL_CRITERIA[p] = {};
+  Object.assign(POSITION_LEVEL_CRITERIA[p], lv);
+  if(!State.data.positionTargets) State.data.positionTargets = {};
+  if(!State.data.positionLevels) State.data.positionLevels = {};
+  State.data.positionTargets[p] = Object.assign({}, POSITION_TARGETS[p]);
+  State.data.positionLevels[p] = Object.assign({}, POSITION_LEVEL_CRITERIA[p]);
+  Storage.save(State.data);
+  closeModal('modalGeneric');
+  renderTalentSubView();
+}
+
+/* #5 编辑个人能力评分量表（分数范围说明） */
+function editScoreBands(){
+  applyTalentConfigOverrides();
+  $('#modalGenericTitle').textContent = '编辑评分量表 · 分数范围说明';
+  $('#modalGenericSub').textContent = 'SCORE BANDS';
+  $('#modalGenericBody').innerHTML = SCORE_BANDS.map((b,i)=>`
+    <div class="card" style="padding:12px;margin-bottom:10px;">
+      <div class="form-row">
+        <div class="form-group"><label>分数范围</label><input class="input" id="sb_range_${i}" value="${(b.range||'').replace(/"/g,'&quot;')}"></div>
+        <div class="form-group"><label>等级标签</label><input class="input" id="sb_label_${i}" value="${(b.label||'').replace(/"/g,'&quot;')}"></div>
+      </div>
+      <div class="form-group"><label>范围说明</label><textarea class="input" id="sb_desc_${i}" style="width:100%;min-height:54px;">${b.desc||''}</textarea></div>
+    </div>`).join('');
+  $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveScoreBands()">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
+  openModal('modalGeneric');
+}
+function saveScoreBands(){
+  SCORE_BANDS.forEach((b,i)=>{ b.range=$('#sb_range_'+i).value.trim(); b.label=$('#sb_label_'+i).value.trim(); b.desc=$('#sb_desc_'+i).value.trim(); });
+  State.data.scoreBands = SCORE_BANDS.map(b=>({range:b.range,label:b.label,level:b.level,desc:b.desc}));
+  Storage.save(State.data);
+  closeModal('modalGeneric');
+  renderTalentSubView();
+}
+
 function renderTalentPositionCharts(){
   const active = activeEmployees();
   POSITIONS.forEach((p,idx) => {
@@ -3527,6 +3621,16 @@ function deleteEmp(id){
 }
 
 function renderEditForm(emp, title){
+  const mgr = isManager(emp);
+  // #2 取近3月月度绩效预填（无则默认最近三个月）
+  const mp = emp.monthlyPerf || {};
+  let recentMonths = Object.keys(mp).sort().slice(-3);
+  if(recentMonths.length < 3){
+    const now = new Date(); const fill = [];
+    for(let i=2;i>=0;i--){ const dt=new Date(now.getFullYear(), now.getMonth()-i, 1); fill.push(dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')); }
+    recentMonths = fill;
+  }
+  const monthRows = recentMonths.map((m,i)=>`<div class="form-row"><div class="form-group"><label>月份${i+1}</label><input class="input" type="month" id="f_pm_month_${i}" value="${m}"></div><div class="form-group"><label>绩效分</label><input class="input" type="number" min="0" max="10" step="0.1" id="f_pm_score_${i}" value="${mp[m]!=null?mp[m]:''}"></div></div>`).join('');
   $('#modalEditTitle').textContent = title;
   $('#modalEditBody').innerHTML = `
     <div class="form-row">
@@ -3546,7 +3650,13 @@ function renderEditForm(emp, title){
       <div class="form-group"><label>最近评估期</label><input class="input" id="f_lastReview" value="${emp.lastReview||''}" placeholder="如 2026-Q1"></div>
     </div>
     <div class="form-section-title">个人能力评估 (7维 · 1-10分)</div>
-    ${PERSONAL_DIMS.map(d=>`<div class="score-input"><label>${d}</label><input type="range" min="0" max="10" step="1" id="f_p_${d}" value="${emp.personal[d]||0}" oninput="document.getElementById('f_p_val_${d}').textContent=this.value"><span class="val" id="f_p_val_${d}">${emp.personal[d]||0}</span></div>`).join('')}
+    ${PERSONAL_DIMS.map(d=>{
+      if(d==='绩效' && !mgr){
+        return `<div class="score-input"><label>绩效 <span style="font-size:10px;color:var(--muted);">(月度自动平均)</span></label><input type="range" min="0" max="10" step="1" id="f_p_${d}" value="${emp.personal[d]||0}" disabled style="opacity:.5;"><span class="val" id="f_p_val_${d}">${emp.personal[d]||0}</span></div>`;
+      }
+      return `<div class="score-input"><label>${d}</label><input type="range" min="0" max="10" step="1" id="f_p_${d}" value="${emp.personal[d]||0}" oninput="document.getElementById('f_p_val_${d}').textContent=this.value"><span class="val" id="f_p_val_${d}">${emp.personal[d]||0}</span></div>`;
+    }).join('')}
+    ${mgr?'':`<div class="form-section-title">月度绩效录入（季度 = 近3月平均，自动回填上方"绩效"）</div>${monthRows}`}
     <div class="form-section-title">岗位胜任评估 (7维 · 1-10分)</div>
     ${POSITION_DIMS.map(d=>`<div class="score-input"><label>${d}</label><input type="range" min="0" max="10" step="1" id="f_q_${d}" value="${emp.position_scores[d]||0}" oninput="document.getElementById('f_q_val_${d}').textContent=this.value"><span class="val" id="f_q_val_${d}">${emp.position_scores[d]||0}</span></div>`).join('')}
     <div class="form-row full"><div class="form-group"><label>备注</label><textarea id="f_notes">${emp.notes||''}</textarea></div></div>
@@ -3560,7 +3670,14 @@ function saveEmployee(){
   if(!id){ alert('请填写员工ID'); return; }
   const personal = {}; PERSONAL_DIMS.forEach(d => personal[d] = +$('#f_p_'+d).value);
   const position_scores = {}; POSITION_DIMS.forEach(d => position_scores[d] = +$('#f_q_'+d).value);
-  const newEmp = { id, name, position:$('#f_position').value, group:$('#f_group').value, status:$('#f_status').value, yearsInRole:+$('#f_years').value, joinDate:$('#f_joinDate').value, lastReview:$('#f_lastReview').value, personal, position_scores, notes:$('#f_notes').value };
+  // #2 收集月度绩效（非经理）
+  const monthlyPerf = {};
+  for(let i=0;i<3;i++){
+    const mEl=$('#f_pm_month_'+i), sEl=$('#f_pm_score_'+i);
+    if(mEl && sEl && mEl.value && sEl.value!=='') monthlyPerf[mEl.value] = +sEl.value;
+  }
+  const newEmp = { id, name, position:$('#f_position').value, group:$('#f_group').value, status:$('#f_status').value, yearsInRole:+$('#f_years').value, joinDate:$('#f_joinDate').value, lastReview:$('#f_lastReview').value, personal, position_scores, monthlyPerf, notes:$('#f_notes').value };
+  syncQuarterPerf(newEmp); // 非经理：用近3月平均回填 personal.绩效
   if(State.editingId){
     const idx = State.data.employees.findIndex(x=>x.id===State.editingId);
     if(idx>=0) State.data.employees[idx] = newEmp;
