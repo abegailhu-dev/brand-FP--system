@@ -1,532 +1,206 @@
 {
   "employees": [
     {
-      "id": "E001",
+      "id": "hsk210101",
       "name": "胡瑕",
       "position": "品牌经理",
       "group": "/",
-      "joinDate": "2022-03-15",
-      "yearsInRole": 4,
       "status": "在岗",
+      "yearsInRole": 5.33,
+      "joinDate": "2021-01-19",
+      "lastReview": "2026-Q1",
       "personal": {
-        "绩效": 9,
-        "技能": 8,
-        "成长": 7,
-        "市场敏锐度": 8,
-        "执行力": 9,
-        "沟通力": 9,
-        "统筹管理": 9
-      },
-      "position_scores": {
-        "专业度": 8,
-        "执行力": 8,
-        "协作沟通": 9,
-        "学习与适应": 7,
-        "创新与数字化": 7,
-        "战略契合度": 9,
-        "用户导向": 8
-      },
-      "notes": "部门负责人",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E002",
-      "name": "程园",
-      "position": "品牌主管",
-      "group": "/",
-      "joinDate": "2023-06-01",
-      "yearsInRole": 3,
-      "status": "在岗",
-      "personal": {
-        "绩效": 8,
-        "技能": 8,
-        "成长": 8,
-        "市场敏锐度": 7,
-        "执行力": 9,
-        "沟通力": 8,
-        "统筹管理": 8
-      },
-      "position_scores": {
-        "专业度": 8,
-        "执行力": 9,
-        "协作沟通": 8,
-        "学习与适应": 8,
-        "创新与数字化": 7,
-        "战略契合度": 7,
-        "用户导向": 7
-      },
-      "notes": "统筹策略和预算",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E003",
-      "name": "刘媛卿",
-      "position": "品牌文案策划专员",
-      "group": "品牌策略与内容组",
-      "joinDate": "2023-09-10",
-      "yearsInRole": 2,
-      "status": "在岗",
-      "personal": {
-        "绩效": 7,
-        "技能": 8,
-        "成长": 8,
-        "市场敏锐度": 8,
-        "执行力": 7,
-        "沟通力": 7,
-        "统筹管理": 6
-      },
-      "position_scores": {
-        "专业度": 8,
-        "执行力": 7,
-        "协作沟通": 7,
-        "学习与适应": 8,
-        "创新与数字化": 7,
-        "战略契合度": 7,
-        "用户导向": 8
-      },
-      "notes": "文案功底好",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E004",
-      "name": "宋麒声",
-      "position": "品牌活动策划专员",
-      "group": "品牌策略与内容组",
-      "joinDate": "2025-03-01",
-      "yearsInRole": 1,
-      "status": "在岗",
-      "personal": {
-        "绩效": 6,
-        "技能": 7,
-        "成长": 8,
-        "市场敏锐度": 7,
-        "执行力": 7,
-        "沟通力": 7,
-        "统筹管理": 6
-      },
-      "position_scores": {
-        "专业度": 7,
-        "执行力": 7,
-        "协作沟通": 7,
-        "学习与适应": 8,
-        "创新与数字化": 7,
-        "战略契合度": 6,
-        "用户导向": 7
-      },
-      "notes": "新入职活动策划",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E005",
-      "name": "李文婷",
-      "position": "品牌活动策划专员",
-      "group": "品牌策略与内容组",
-      "joinDate": "2025-04-01",
-      "yearsInRole": 1,
-      "status": "在岗",
-      "personal": {
-        "绩效": 6,
-        "技能": 7,
-        "成长": 8,
-        "市场敏锐度": 7,
-        "执行力": 7,
-        "沟通力": 8,
-        "统筹管理": 5
-      },
-      "position_scores": {
-        "专业度": 7,
-        "执行力": 7,
-        "协作沟通": 8,
-        "学习与适应": 8,
-        "创新与数字化": 7,
-        "战略契合度": 6,
-        "用户导向": 7
-      },
-      "notes": "新入职活动策划",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E006",
-      "name": "赵倍",
-      "position": "品牌会员商城运营专员",
-      "group": "品牌策略与内容组",
-      "joinDate": "2025-05-01",
-      "yearsInRole": 0,
-      "status": "在岗",
-      "personal": {
-        "绩效": 5,
-        "技能": 7,
-        "成长": 8,
-        "市场敏锐度": 6,
-        "执行力": 7,
-        "沟通力": 7,
-        "统筹管理": 5
-      },
-      "position_scores": {
-        "专业度": 7,
-        "执行力": 7,
-        "协作沟通": 7,
-        "学习与适应": 8,
-        "创新与数字化": 7,
-        "战略契合度": 6,
-        "用户导向": 8
-      },
-      "notes": "新入职会员运营",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E007",
-      "name": "饶学佳",
-      "position": "中级品牌推广专员",
-      "group": "整合营销推广组",
-      "joinDate": "2024-02-20",
-      "yearsInRole": 2,
-      "status": "在岗",
-      "personal": {
-        "绩效": 7,
-        "技能": 7,
-        "成长": 8,
-        "市场敏锐度": 7,
-        "执行力": 8,
-        "沟通力": 7,
-        "统筹管理": 6
-      },
-      "position_scores": {
-        "专业度": 7,
-        "执行力": 8,
-        "协作沟通": 8,
-        "学习与适应": 8,
-        "创新与数字化": 7,
-        "战略契合度": 6,
-        "用户导向": 7
-      },
-      "notes": "执行稳定",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E008",
-      "name": "李若琳",
-      "position": "初级品牌推广专员",
-      "group": "整合营销推广组",
-      "joinDate": "2025-06-01",
-      "yearsInRole": 0,
-      "status": "在岗",
-      "personal": {
-        "绩效": 5,
-        "技能": 6,
-        "成长": 8,
-        "市场敏锐度": 7,
-        "执行力": 7,
-        "沟通力": 7,
-        "统筹管理": 5
-      },
-      "position_scores": {
-        "专业度": 6,
-        "执行力": 7,
-        "协作沟通": 7,
-        "学习与适应": 8,
-        "创新与数字化": 7,
-        "战略契合度": 5,
-        "用户导向": 7
-      },
-      "notes": "新入职推广",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E009",
-      "name": "田慧慧",
-      "position": "中级品牌视觉设计师",
-      "group": "品牌视觉创意组",
-      "joinDate": "2023-04-12",
-      "yearsInRole": 3,
-      "status": "在岗",
-      "personal": {
-        "绩效": 8,
+        "绩效": 10,
         "技能": 9,
-        "成长": 7,
-        "市场敏锐度": 6,
+        "成长": 10,
+        "市场敏锐度": 8,
         "执行力": 8,
-        "沟通力": 6,
-        "统筹管理": 6
+        "沟通力": 10,
+        "统筹管理": 9
       },
       "position_scores": {
         "专业度": 9,
         "执行力": 8,
-        "协作沟通": 6,
-        "学习与适应": 7,
+        "协作沟通": 9,
+        "学习与适应": 9,
         "创新与数字化": 8,
-        "战略契合度": 6,
-        "用户导向": 6
+        "战略契合度": 9,
+        "用户导向": 9
       },
-      "notes": "视觉功底扎实",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E010",
-      "name": "冯宇",
-      "position": "初级品牌视觉设计师",
-      "group": "品牌视觉创意组",
-      "joinDate": "2025-05-15",
-      "yearsInRole": 0,
-      "status": "在岗",
-      "personal": {
-        "绩效": 5,
-        "技能": 7,
-        "成长": 8,
-        "市场敏锐度": 6,
-        "执行力": 7,
-        "沟通力": 6,
-        "统筹管理": 5
-      },
-      "position_scores": {
-        "专业度": 7,
-        "执行力": 7,
-        "协作沟通": 6,
-        "学习与适应": 8,
-        "创新与数字化": 7,
-        "战略契合度": 5,
-        "用户导向": 6
-      },
-      "notes": "新入职设计师",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "E011",
-      "name": "耿雨阳",
-      "position": "摄影摄像师",
-      "group": "品牌视觉创意组",
-      "joinDate": "2024-05-01",
-      "yearsInRole": 2,
-      "status": "在岗",
-      "personal": {
-        "绩效": 7,
-        "技能": 8,
-        "成长": 8,
-        "市场敏锐度": 8,
-        "执行力": 8,
-        "沟通力": 7,
-        "统筹管理": 5
-      },
-      "position_scores": {
-        "专业度": 8,
-        "执行力": 8,
-        "协作沟通": 7,
-        "学习与适应": 8,
-        "创新与数字化": 9,
-        "战略契合度": 6,
-        "用户导向": 8
-      },
-      "notes": "短视频能力强",
-      "lastReview": "2026-Q1"
-    },
-    {
-      "id": "hsk210101",
-      "name": "胡瑕",
-      "position": "品牌经理",
-      "group": "管理组",
-      "status": "2021/1/19",
-      "yearsInRole": 5.33,
-      "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 9,
-        "logic": 10,
-        "aesthetics": 8,
-        "collaboration": 8,
-        "learning": 10
-      },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
-      },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2502147",
       "name": "程园",
       "position": "品牌主管",
-      "group": "管理组",
-      "status": "2025/2/24",
+      "group": "/",
+      "status": "在岗",
       "yearsInRole": 1.25,
+      "joinDate": "2025-02-24",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 8,
-        "logic": 8,
-        "aesthetics": 7,
-        "collaboration": 8,
-        "learning": 7.5
+        "绩效": 10,
+        "技能": 8,
+        "成长": 8,
+        "市场敏锐度": 7,
+        "执行力": 8,
+        "沟通力": 7,
+        "统筹管理": 8
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 9,
+        "协作沟通": 7,
+        "学习与适应": 8,
+        "创新与数字化": 6,
+        "战略契合度": 7,
+        "用户导向": 8
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2604040",
       "name": "李文婷",
-      "position": "品牌策划",
+      "position": "品牌活动策划专员",
       "group": "品牌策略与内容组",
-      "status": "2026/4/20",
+      "status": "试用期",
       "yearsInRole": 0.08,
+      "joinDate": "2026-04-20",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 7,
-        "logic": 8,
-        "aesthetics": 7,
-        "collaboration": 8,
-        "learning": 7
+        "绩效": 10,
+        "技能": 7,
+        "成长": 8,
+        "市场敏锐度": 7,
+        "执行力": 8,
+        "沟通力": 7,
+        "统筹管理": 7
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 8,
+        "协作沟通": 7,
+        "学习与适应": 9,
+        "创新与数字化": 6,
+        "战略契合度": 7,
+        "用户导向": 7
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2602004",
       "name": "赵倩",
-      "position": "会员商城运营",
+      "position": "品牌会员商城运营专员",
       "group": "品牌策略与内容组",
-      "status": "2026/2/4",
+      "status": "试用期",
       "yearsInRole": 0.33,
+      "joinDate": "2026-02-04",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 6,
-        "logic": 7,
-        "aesthetics": 4,
-        "collaboration": 7,
-        "learning": 6
+        "绩效": 10,
+        "技能": 6,
+        "成长": 7,
+        "市场敏锐度": 4,
+        "执行力": 7,
+        "沟通力": 6,
+        "统筹管理": 6
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 6,
+        "协作沟通": 7,
+        "学习与适应": 6,
+        "创新与数字化": 6,
+        "战略契合度": 6,
+        "用户导向": 6
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2506019",
       "name": "刘媛卿",
-      "position": "品牌策划",
+      "position": "品牌文案策划专员",
       "group": "品牌策略与内容组",
-      "status": "2025/6/27",
+      "status": "在岗",
       "yearsInRole": 0.92,
+      "joinDate": "2025-06-27",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 6,
-        "logic": 7,
-        "aesthetics": 5,
-        "collaboration": 8,
-        "learning": 6
+        "绩效": 10,
+        "技能": 6,
+        "成长": 7,
+        "市场敏锐度": 5,
+        "执行力": 8,
+        "沟通力": 6,
+        "统筹管理": 7
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 8,
+        "协作沟通": 7,
+        "学习与适应": 7,
+        "创新与数字化": 6,
+        "战略契合度": 6,
+        "用户导向": 7
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2604013",
       "name": "宋麒声",
-      "position": "品牌策划",
+      "position": "品牌活动策划专员",
       "group": "品牌策略与内容组",
-      "status": "2026/4/7",
+      "status": "试用期",
       "yearsInRole": 0.17,
+      "joinDate": "2026-04-07",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 7,
-        "logic": 8,
-        "aesthetics": 7,
-        "collaboration": 8,
-        "learning": 7
+        "绩效": 10,
+        "技能": 7,
+        "成长": 8,
+        "市场敏锐度": 7,
+        "执行力": 8,
+        "沟通力": 7,
+        "统筹管理": 8
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 8,
+        "协作沟通": 8,
+        "学习与适应": 8,
+        "创新与数字化": 6,
+        "战略契合度": 7,
+        "用户导向": 7
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2601010",
       "name": "冯宇",
-      "position": "品牌设计师",
+      "position": "中级品牌视觉设计师",
       "group": "品牌视觉创意组",
-      "status": "2026/1/7",
+      "status": "在岗",
       "yearsInRole": 0.42,
+      "joinDate": "2026-01-07",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 8,
-        "logic": 8,
-        "aesthetics": 6,
-        "collaboration": 8,
-        "learning": 7
+        "绩效": 10,
+        "技能": 8,
+        "成长": 8,
+        "市场敏锐度": 6,
+        "执行力": 8,
+        "沟通力": 7,
+        "统筹管理": 7
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 8,
+        "协作沟通": 8,
+        "学习与适应": 8,
+        "创新与数字化": 6,
+        "战略契合度": 7,
+        "用户导向": 7
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
@@ -534,119 +208,115 @@
       "name": "耿雨阳",
       "position": "摄影摄像师",
       "group": "品牌视觉创意组",
-      "status": "2025/6/24",
+      "status": "在岗",
       "yearsInRole": 0.92,
+      "joinDate": "2025-06-24",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 9,
-        "execution": 6,
-        "logic": 5,
-        "aesthetics": 4,
-        "collaboration": 6,
-        "learning": 6
+        "绩效": 9,
+        "技能": 6,
+        "成长": 5,
+        "市场敏锐度": 4,
+        "执行力": 6,
+        "沟通力": 6,
+        "统筹管理": 6
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 6,
+        "执行力": 7,
+        "协作沟通": 6,
+        "学习与适应": 6,
+        "创新与数字化": 6,
+        "战略契合度": 6,
+        "用户导向": 7
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2504014",
       "name": "饶学佳",
-      "position": "品牌推广",
+      "position": "中级品牌推广专员",
       "group": "整合营销推广组",
-      "status": "2025/4/8",
+      "status": "在岗",
       "yearsInRole": 1.17,
+      "joinDate": "2025-04-08",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 7.5,
-        "logic": 8,
-        "aesthetics": 6,
-        "collaboration": 8,
-        "learning": 7
+        "绩效": 10,
+        "技能": 8,
+        "成长": 8,
+        "市场敏锐度": 6,
+        "执行力": 8,
+        "沟通力": 7,
+        "统筹管理": 8
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 8,
+        "协作沟通": 7,
+        "学习与适应": 8,
+        "创新与数字化": 6,
+        "战略契合度": 7,
+        "用户导向": 7
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2603002",
       "name": "李若琳",
-      "position": "品牌推广",
+      "position": "中级品牌推广专员",
       "group": "整合营销推广组",
-      "status": "2026/3/4",
+      "status": "试用期",
       "yearsInRole": 0.25,
+      "joinDate": "2026-03-04",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 7.5,
-        "logic": 9,
-        "aesthetics": 6,
-        "collaboration": 8,
-        "learning": 9
+        "绩效": 10,
+        "技能": 8,
+        "成长": 9,
+        "市场敏锐度": 6,
+        "执行力": 8,
+        "沟通力": 9,
+        "统筹管理": 9
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 7,
+        "执行力": 8,
+        "协作沟通": 7,
+        "学习与适应": 9,
+        "创新与数字化": 6,
+        "战略契合度": 7,
+        "用户导向": 7
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     },
     {
       "id": "2401005",
       "name": "田慧慧",
-      "position": "品牌设计师",
+      "position": "中级品牌视觉设计师",
       "group": "品牌视觉创意组",
-      "status": "2024/1/9",
+      "status": "在岗",
       "yearsInRole": 2.33,
+      "joinDate": "2024-01-09",
+      "lastReview": "2026-Q1",
       "personal": {
-        "innovation": 3,
-        "expression": 10,
-        "execution": 7,
-        "logic": 8,
-        "aesthetics": 6,
-        "collaboration": 8,
-        "learning": 7.5
+        "绩效": 10,
+        "技能": 7,
+        "成长": 8,
+        "市场敏锐度": 6,
+        "执行力": 8,
+        "沟通力": 7,
+        "统筹管理": 6
       },
-      "positionFit": {
-        "strategy": 3,
-        "creativity": 3,
-        "dataAnalysis": 3,
-        "execution": 3,
-        "communication": 3,
-        "leadership": 3,
-        "techSavvy": 3
+      "position_scores": {
+        "专业度": 8,
+        "执行力": 8,
+        "协作沟通": 7,
+        "学习与适应": 8,
+        "创新与数字化": 7,
+        "战略契合度": 7,
+        "用户导向": 7
       },
-      "potential": "B",
-      "flightRisk": "低",
-      "devPlan": [],
       "notes": ""
     }
   ],
@@ -3126,5 +2796,6 @@
       }
     ]
   },
-  "_publishedVersion": 1780907217986
+  "_publishedVersion": 1780907329132,
+  "budgetPassword": "888888"
 }
