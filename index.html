@@ -2689,18 +2689,17 @@ function assignFromPool(poolId, assigneeName){
 function renderTalentModule(){
   const subViews = [
     { id:'talent-overview', label:'部门概览' },
-    { id:'talent-rules', label:'评估标准' },
-    { id:'talent-portrait', label:'个人画像' },
-    { id:'talent-position', label:'岗位胜任' },
-    { id:'talent-gap', label:'缺口分析' },
-    { id:'talent-highpot', label:'高潜识别' },
-    { id:'talent-path', label:'发展路径' },
-    { id:'talent-manage', label:'数据管理' }
+    { id:'talent-portrait', label:'员工画像' },
+    { id:'talent-position', label:'岗位职级' },
+    { id:'talent-highpot', label:'人才盘点' }
   ];
+  // 旧子页ID兼容：缺口→概览、评估标准/岗位胜任→岗位职级、发展路径→员工画像、数据管理→已迁出
+  const legacyMap = { 'talent-gap':'talent-overview', 'talent-rules':'talent-position', 'talent-path':'talent-portrait', 'talent-manage':'talent-overview' };
+  if(legacyMap[State.talentSubView]) State.talentSubView = legacyMap[State.talentSubView];
 
   let content = `
     ${header('人才管理', 'TALENT OS', '16 · 团队管理',
-      '品牌部人才管理全模块。覆盖评估标准、个人画像、岗位胜任、缺口分析、高潜识别、发展路径与数据管理。')}
+      '品牌部人才管理。部门概览(含缺口分析)、员工画像(含发展路径)、岗位职级(含评估标准与晋升/淘汰建议)、人才盘点。')}
     <div class="sub-tabs">
       ${subViews.map(v => `<div class="sub-tab ${State.talentSubView===v.id?'active':''}" onclick="switchTalentSub('${v.id}')">${v.label}</div>`).join('')}
     </div>
@@ -2713,9 +2712,8 @@ function renderTalentModule(){
 function switchTalentSub(sub){
   State.talentSubView = sub;
   $$('.sub-tab').forEach(t => t.classList.toggle('active', t.textContent === {
-    'talent-overview':'部门概览','talent-rules':'评估标准','talent-portrait':'个人画像',
-    'talent-position':'岗位胜任','talent-gap':'缺口分析','talent-highpot':'高潜识别',
-    'talent-path':'发展路径','talent-manage':'数据管理'
+    'talent-overview':'部门概览','talent-portrait':'员工画像',
+    'talent-position':'岗位职级','talent-highpot':'人才盘点'
   }[sub]));
   renderTalentSubView();
 }
@@ -2724,23 +2722,18 @@ function renderTalentSubView(){
   const container = $('#talentSubContent');
   if(!container) return;
   switch(State.talentSubView){
-    case 'talent-overview': container.innerHTML = talentOverviewHTML(); break;
-    case 'talent-rules': container.innerHTML = talentRulesHTML(); break;
+    case 'talent-overview': container.innerHTML = talentOverviewHTML() + talentGapHTML(); break;
     case 'talent-portrait': container.innerHTML = talentPortraitHTML(); break;
-    case 'talent-position': container.innerHTML = talentPositionHTML(); break;
-    case 'talent-gap': container.innerHTML = talentGapHTML(); break;
+    case 'talent-position': container.innerHTML = talentPositionHTML() + talentRulesHTML(); break;
     case 'talent-highpot': container.innerHTML = talentHighPotHTML(); break;
-    case 'talent-path': container.innerHTML = talentPathHTML(); break;
-    case 'talent-manage': container.innerHTML = talentManageHTML(); break;
-    default: container.innerHTML = talentOverviewHTML();
+    default: container.innerHTML = talentOverviewHTML() + talentGapHTML();
   }
   // Post-render charts
   setTimeout(() => {
     switch(State.talentSubView){
-      case 'talent-overview': renderTalentOverviewCharts(); break;
+      case 'talent-overview': renderTalentOverviewCharts(); renderTalentGapCharts(); break;
       case 'talent-portrait': renderTalentPortraitCharts(); break;
       case 'talent-position': renderTalentPositionCharts(); break;
-      case 'talent-gap': renderTalentGapCharts(); break;
     }
   }, 50);
 }
@@ -2813,9 +2806,59 @@ function talentPortraitHTML(){
       <select class="select" id="tpShowAvg"><option value="1">叠加均值</option><option value="0">不叠加</option></select>
     </div>
     <div class="card elevated" style="margin-bottom:28px;"><div class="card-title">对比雷达图</div><div class="chart-box tall"><canvas id="tpRadar"></canvas></div></div>
-    <div class="card-title" style="margin:24px 0 16px;">全员画像卡片</div>
-    <div class="grid grid-3">${active.map(e => empCardHTML(e)).join('')}</div>
+    <div class="card-title" style="margin:24px 0 16px;">全员画像 · 含发展路径（直接展开，无需点击）</div>
+    ${active.map(e => empFullPortraitHTML(e)).join('')}
   `;
+}
+
+/* 单员工完整画像（个人能力 + 岗位胜任 + 发展路径），内联展开无需点击 */
+function empFullPortraitHTML(e){
+  const isVacant = e.status === '空缺';
+  const aP = avgPersonal(e), aQ = avgPosition(e);
+  const t = POSITION_TARGETS[e.position] || {};
+  const personalBars = PERSONAL_DIMS.map(d=>{
+    const v = e.personal[d]||0;
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="font-size:11px;color:var(--muted);width:72px;flex-shrink:0;">${d}</span><div style="flex:1;background:var(--line-2);border-radius:3px;height:6px;overflow:hidden;"><div style="width:${v*10}%;height:100%;background:#5BA8D6;border-radius:3px;"></div></div><span class="num" style="font-size:11px;width:24px;text-align:right;">${fmt(v)}</span></div>`;
+  }).join('');
+  const posRows = POSITION_DIMS.map(d=>{
+    const cur=e.position_scores[d]||0, tgt=t[d]||0, gap=Math.max(0,tgt-cur);
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="font-size:11px;color:var(--muted);width:72px;flex-shrink:0;">${d}</span><div style="flex:1;background:var(--line-2);border-radius:3px;height:6px;overflow:hidden;"><div style="width:${cur*10}%;height:100%;background:${gap>1.5?'var(--risk)':gap>0.5?'var(--warn)':'#7FCEAB'};border-radius:3px;"></div></div><span class="num" style="font-size:11px;width:52px;text-align:right;">${fmt(cur)}/${fmt(tgt)}</span></div>`;
+  }).join('');
+  return `<div class="card elevated" style="margin-bottom:18px;">
+    <div class="emp-head" style="margin-bottom:14px;">
+      <div class="emp-avatar ${isVacant?'vacant':''}">${initials(e.name)}</div>
+      <div style="flex:1;"><div class="emp-name">${e.name}</div><div class="emp-position">${e.position} · ${e.group} · ${e.status}${!isVacant?' · 在岗'+e.yearsInRole+'年':''}</div></div>
+      <div style="display:flex;gap:18px;text-align:center;">
+        <div><div style="font-size:10px;color:var(--muted);">个人</div><div class="num" style="font-weight:700;">${isVacant?'—':fmt(aP)}</div></div>
+        <div><div style="font-size:10px;color:var(--muted);">岗位</div><div class="num" style="font-weight:700;">${isVacant?'—':fmt(aQ)}</div></div>
+        <div><div style="font-size:10px;color:var(--muted);">综合</div><div class="num" style="font-weight:700;">${isVacant?'—':fmt((aP+aQ)/2)}</div></div>
+      </div>
+    </div>
+    ${isVacant?'<div style="color:var(--muted);font-size:13px;padding:8px 0;">空缺岗位，暂无画像数据。</div>':`
+    <div class="grid grid-2" style="gap:24px;">
+      <div><div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">个人能力 7维</div>${personalBars}</div>
+      <div><div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2px;margin-bottom:10px;">岗位胜任 7维（当前/目标）</div>${posRows}</div>
+    </div>
+    ${empDevPathHTML(e)}`}
+  </div>`;
+}
+
+/* 发展路径（基于缺口的自动分析+三年路线），供员工画像内联展示 */
+function empDevPathHTML(e){
+  const t = POSITION_TARGETS[e.position];
+  if(!t) return '';
+  const gaps = POSITION_DIMS.map(d=>({d, cur:e.position_scores[d]||0, tgt:t[d], gap:Math.max(0,t[d]-(e.position_scores[d]||0))})).sort((a,b)=>b.gap-a.gap);
+  const top = gaps.filter(g=>g.gap>0).slice(0,2);
+  const overall = avgPosition(e);
+  const curLevel = overall>=9?'L4':overall>=8?'L3':overall>=7?'L2':'L1';
+  return `<div style="margin-top:16px;border-top:1px dashed var(--line-2);padding-top:14px;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2px;">发展路径</span><span class="level-badge ${curLevel}">${curLevel}</span><span style="color:var(--muted);">→</span><span class="level-badge ${t.level}">${t.level}</span><span style="font-size:11px;color:var(--muted);">${top.length?'核心短板：'+top.map(g=>g.d).join('、'):'各维度已达标，进入强化期'}</span></div>
+    <div class="roadmap">
+      <div class="roadmap-stage"><div class="roadmap-year">YEAR 01 · 补齐</div><div class="roadmap-title">补齐核心短板</div><div class="roadmap-content">聚焦 <strong>${top.length?top.map(g=>g.d).join(' + '):'全维度'}</strong>，达到岗位目标80%。</div></div>
+      <div class="roadmap-stage y2"><div class="roadmap-year">YEAR 02 · 强化</div><div class="roadmap-title">强化岗位核心</div><div class="roadmap-content">全维度逼近岗位目标，开始横向影响。</div></div>
+      <div class="roadmap-stage y3"><div class="roadmap-year">YEAR 03 · 突破</div><div class="roadmap-title">向上突破</div><div class="roadmap-content">达到 <strong>${t.level}</strong> 标杆，定义方法论，培养下一代。</div></div>
+    </div>
+  </div>`;
 }
 function renderTalentPortraitCharts(){
   const active = activeEmployees();
@@ -2856,9 +2899,34 @@ function empCardHTML(e){
 
 /* --- Talent Position --- */
 function talentPositionHTML(){
-  const active = activeEmployees();
+  const active = activeEmployees().filter(e=>e.status!=='空缺');
+  // 晋升/淘汰建议：按 7维达标数 与 综合分相对岗位目标 判定
+  const assess = active.map(e=>{
+    const t = POSITION_TARGETS[e.position]||{};
+    const metDims = POSITION_DIMS.filter(d=>(e.position_scores[d]||0) >= (t[d]||0)).length;
+    const tgtAvg = avg(POSITION_DIMS.map(d=>t[d]||0));
+    const curAvg = avgPosition(e);
+    const ratio = tgtAvg>0 ? curAvg/tgtAvg : 0;
+    return { e, metDims, curAvg, tgtAvg, ratio };
+  });
+  // 接近/超过目标(达标≥6维 或 综合≥目标98%)→晋升候选；达标≤2维 或 综合≤目标80%→淘汰预警
+  const promote = assess.filter(a=>a.metDims>=6 || a.ratio>=0.98).sort((x,y)=>y.ratio-x.ratio);
+  const eliminate = assess.filter(a=>a.metDims<=2 || a.ratio<=0.80).sort((x,y)=>x.ratio-y.ratio);
+  const chip = a => `<span class="pill ${a.ratio>=0.98?'mint':a.ratio<=0.8?'risk':'gray'}" style="margin:3px 6px 3px 0;display:inline-block;">${a.e.name} · ${a.e.position} <span class="num">(达标${a.metDims}/7 · ${Math.round(a.ratio*100)}%)</span></span>`;
   return `
-    <div class="notice mint"><span class="notice-icon">⊕</span><div><strong>等级量化规则:</strong> L1(≥6) · L2(≥7) · L3(≥8) · L4(≥9)。岗位达标=7维中≥5维达目标值。</div></div>
+    <div class="grid grid-2" style="margin-bottom:24px;">
+      <div class="card elevated" style="border-left:3px solid var(--frog-mint);">
+        <div class="card-title" style="color:var(--frog-mint);">⬆ 建议晋升 · 接近/达到岗位目标</div>
+        <div class="card-desc">达标≥6/7维 或 综合达目标98%以上</div>
+        <div style="margin-top:10px;">${promote.length?promote.map(chip).join(''):'<span style="color:var(--muted);font-size:13px;">暂无符合条件人选</span>'}</div>
+      </div>
+      <div class="card elevated" style="border-left:3px solid var(--risk);">
+        <div class="card-title" style="color:var(--risk);">⬇ 淘汰预警 · 远低于岗位目标</div>
+        <div class="card-desc">达标≤2/7维 或 综合不足目标80%</div>
+        <div style="margin-top:10px;">${eliminate.length?eliminate.map(chip).join(''):'<span style="color:var(--muted);font-size:13px;">暂无预警人选</span>'}</div>
+      </div>
+    </div>
+    <div class="notice mint"><span class="notice-icon">⊕</span><div><strong>等级量化规则:</strong> L1(≥6) · L2(≥7) · L3(≥8) · L4(≥9)。岗位达标=7维中≥5维达目标值。岗位目标值可在「评估标准」下方编辑（后续批次开放）。</div></div>
     ${POSITIONS.map((p,idx) => {
       const t = POSITION_TARGETS[p]; if(!t) return '';
       const holders = active.filter(e=>e.position===p);
@@ -2956,7 +3024,8 @@ function generatePersonInsights(active){
 
 /* --- Talent HighPot --- */
 function talentHighPotHTML(){
-  const active = activeEmployees();
+  // #11a 经理「胡瑕」不纳入九宫格盘点
+  const active = activeEmployees().filter(e => e.name !== '胡瑕');
   function band(v){ return v<6?0:v<7.5?1:2; }
   const boxes = [[[],[],[]],[[],[],[]],[[],[],[]]];
   active.forEach(e => {
@@ -2969,9 +3038,33 @@ function talentHighPotHTML(){
     '1-2':{label:'中坚力量',cls:'solid'},'1-1':{label:'稳定贡献',cls:'solid'},'1-0':{label:'待激活',cls:'risk'},
     '0-2':{label:'专家贡献',cls:'solid'},'0-1':{label:'达标',cls:''},'0-0':{label:'风险关注',cls:'risk'}
   };
+  // #10 每格说明（含建议动作）
+  const descMap = {
+    '2-2':'高潜力+高绩效。重点保留与加速培养，给挑战性项目与晋升通道。',
+    '2-1':'高潜力+中绩效。潜力已现、产出待提升，明确目标并加压。',
+    '2-0':'高潜力+低绩效。潜力未释放，排查动机/岗位匹配，针对性辅导。',
+    '1-2':'中潜力+高绩效。当前中坚骨干，稳定输出，可拓展能力边界。',
+    '1-1':'中潜力+中绩效。稳定贡献者，常规激励与技能提升。',
+    '1-0':'中潜力+低绩效。需激活，复盘问题、设定短期改进计划。',
+    '0-2':'低潜力+高绩效。资深专家型贡献，发挥经验、做深做精。',
+    '0-1':'低潜力+中绩效。达标维持，关注稳定性。',
+    '0-0':'低潜力+低绩效。风险关注，限期改进或调整岗位。'
+  };
   const star = boxes[2][2]; const hipo = [...boxes[2][2],...boxes[2][1]]; const risk = [...boxes[0][0],...boxes[1][0]];
 
+  // #10 逐人点评
+  function personReview(e){
+    const perf=e.personal['绩效']||0, pot=avg([e.personal['成长']||0,e.position_scores['学习与适应']||0,e.personal['市场敏锐度']||0]);
+    const k=band(pot)+'-'+band(perf); const info=labelMap[k]||{label:''};
+    return `<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--line-2);">
+      <div class="emp-avatar" style="width:32px;height:32px;font-size:12px;border-radius:8px;flex-shrink:0;">${initials(e.name)}</div>
+      <div style="flex:1;"><div style="font-size:13px;font-weight:700;">${e.name} <span class="pill ${info.cls==='star'?'mint':info.cls==='risk'?'risk':'gray'}" style="margin-left:6px;">${info.label}</span></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px;">绩效 ${fmt(perf)} · 潜力 ${fmt(pot)}　|　${descMap[k]||''}</div></div>
+    </div>`;
+  }
+
   return `
+    <div class="notice"><span class="notice-icon">ⓘ</span><div>九宫格按「绩效 × 潜力」分布。<strong>经理胡瑕不纳入盘点</strong>。下方每格附说明，底部为逐人点评。</div></div>`+`
     <div class="grid grid-2" style="margin-bottom:28px;">
       <div class="card elevated">
         <div class="card-title">九宫格人才盘点</div><div class="card-desc">绩效 x 潜力</div>
@@ -2979,7 +3072,7 @@ function talentHighPotHTML(){
           <div class="nb-y-label">潜力</div>
           ${[2,1,0].flatMap(y => [0,1,2].map(x => {
             const k=y+'-'+x; const info=labelMap[k]||{label:'',cls:''};
-            return `<div class="nb-cell ${info.cls}"><div class="nb-cell-label">${info.label}</div><div class="nb-cell-people">${boxes[y][x].map(p=>'<span class="nb-person">'+p.name+'</span>').join('')}</div></div>`;
+            return `<div class="nb-cell ${info.cls}" title="${descMap[k]||''}"><div class="nb-cell-label">${info.label}</div><div style="font-size:9px;color:var(--muted);line-height:1.3;margin:2px 0 4px;">${descMap[k]||''}</div><div class="nb-cell-people">${boxes[y][x].map(p=>'<span class="nb-person">'+p.name+'</span>').join('')}</div></div>`;
           })).join('')}
           <div></div><div class="nb-x-label">低绩效</div><div class="nb-x-label">中绩效</div><div class="nb-x-label">高绩效</div>
         </div>
@@ -2998,6 +3091,11 @@ function talentHighPotHTML(){
           ${risk.length ? risk.map(e=>starRowHTML(e)).join('') : '<div style="padding:14px 0;color:var(--muted);font-size:13px;">暂无</div>'}
         </div>
       </div>
+    </div>
+    <div class="card elevated">
+      <div class="card-title">逐人点评分析</div>
+      <div class="card-desc">基于绩效×潜力分布的个人定位与建议（共 ${active.length} 人，不含经理胡瑕）</div>
+      <div style="margin-top:8px;">${active.map(e=>personReview(e)).join('')}</div>
     </div>
   `;
 }
@@ -3117,7 +3215,7 @@ function importTalentCsv(){
       });
       Storage.save(State.data);
     },
-    after(){ State.talentSubView='talent-manage'; renderTalentModule(); setTimeout(postRenderTalent,60); }
+    after(){ render(); }
   });
 }
 
@@ -3195,6 +3293,22 @@ function renderDataManage(){
         <label class="btn" style="cursor:pointer;">选择CSV文件<input type="file" accept=".csv" style="display:none;" onchange="importCSVData(event)"></label>
       </div>
       <div id="csvImportPreview" style="margin-top:16px;"></div>
+    </div>
+    <div class="card elevated" style="margin-top:28px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div><div class="card-title" style="margin:0;">员工数据管理</div><div class="card-desc">员工花名册的新增、编辑、删除（从人才管理迁移至此）</div></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn" onclick="openNewEmp()">+ 新增员工</button>
+          <button class="btn ghost" onclick="importTalentCsv()">📤 CSV导入</button>
+          <button class="btn ghost" onclick="downloadTalentTemplate()">📥 CSV模板</button>
+        </div>
+      </div>
+      <table class="tbl"><thead><tr><th>ID</th><th>姓名</th><th>岗位</th><th>小组</th><th>状态</th><th class="center">在岗</th><th class="center">个人</th><th class="center">岗位</th><th class="center">综合</th><th>操作</th></tr></thead><tbody>
+        ${State.data.employees.map(e => {
+          const aP=avgPersonal(e), aQ=avgPosition(e), v=e.status==='空缺';
+          return `<tr><td class="num" style="color:var(--muted);">${e.id}</td><td><strong>${e.name}</strong></td><td>${e.position}</td><td>${e.group}</td><td><span class="pill ${v?'risk':'mint'} dot">${e.status}</span></td><td class="center num">${v?'—':e.yearsInRole+'y'}</td><td class="center num">${v?'—':fmt(aP)}</td><td class="center num">${v?'—':fmt(aQ)}</td><td class="center num"><strong>${v?'—':fmt((aP+aQ)/2)}</strong></td><td><button class="btn ghost sm" onclick="editEmp('${e.id}')">编辑</button> <button class="btn ghost sm" onclick="deleteEmp('${e.id}')" style="color:var(--risk);">删除</button></td></tr>`;
+        }).join('')}
+      </tbody></table>
     </div>
   `;
   $('#main').innerHTML = `<section class="section active">${html}</section>`;
