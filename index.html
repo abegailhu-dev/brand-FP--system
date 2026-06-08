@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>品牌推广部 · 管理OS v2.0 / Frogprince Brand Dept OS</title>
+<title>品牌部 · 管理OS v2.0 / Frogprince Brand Dept OS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
@@ -1261,7 +1261,7 @@ input[type=file]{display:none;}
       <div class="brand-logo">
         <div class="brand-logo-icon">青</div>
         <div>
-          <div class="brand-name">品牌推广部</div>
+          <div class="brand-name">品牌部</div>
           <div class="brand-sub">FROGPRINCE · DEPT OS</div>
         </div>
       </div>
@@ -1357,7 +1357,7 @@ input[type=file]{display:none;}
     </div>
 
     <div class="sidebar-footer">
-      <strong>品牌推广部 · 管理 OS v2.0</strong><br>
+      <strong>品牌部 · 管理 OS v2.0</strong><br>
       <span id="syncModeTip">数据本地存储 · 可导出 JSON</span><br>
       <span id="lastSavedTip">尚未修改</span>
     </div>
@@ -1449,7 +1449,7 @@ input[type=file]{display:none;}
 
 <script>
 /* ==========================================================
- * 品牌推广部 · 管理OS v2.0
+ * 品牌部 · 管理OS v2.0
  * Single-file vanilla JS application
  * ========================================================== */
 
@@ -2115,7 +2115,7 @@ function renderDashboard(){
 
   const html = `
     ${header('部门总看板', 'DASHBOARD', '01 · 管理中心',
-      '品牌推广部运营全景。实时跟踪核心KPI、OKR进度、预算执行、本周重点和团队工作负载。')}
+      '品牌部运营全景。实时跟踪核心KPI、OKR进度、预算执行、本周重点和团队工作负载。')}
 
     <div class="grid grid-4" style="margin-bottom:28px;">
       <div class="stat">
@@ -2700,7 +2700,7 @@ function renderTalentModule(){
 
   let content = `
     ${header('人才管理', 'TALENT OS', '16 · 团队管理',
-      '品牌推广部人才管理全模块。覆盖评估标准、个人画像、岗位胜任、缺口分析、高潜识别、发展路径与数据管理。')}
+      '品牌部人才管理全模块。覆盖评估标准、个人画像、岗位胜任、缺口分析、高潜识别、发展路径与数据管理。')}
     <div class="sub-tabs">
       ${subViews.map(v => `<div class="sub-tab ${State.talentSubView===v.id?'active':''}" onclick="switchTalentSub('${v.id}')">${v.label}</div>`).join('')}
     </div>
@@ -3541,9 +3541,14 @@ function importData(ev){
 }
 
 function resetData(){
-  if(!confirm('确认重置为示例数据? 当前所有修改将丢失。')) return;
+  // 保险栓：二次确认 + 要求手动输入指定文字，防止误触清空数据
+  if(!confirm('⚠️ 危险操作：将清空当前所有数据并恢复为示例数据，且不可撤销！\n\n建议先在「数据管理」导出 data.json 备份。确定要继续吗？')) return;
+  const typed = prompt('请输入「重置」二字以确认执行（取消则放弃）：');
+  if(typed === null) return;
+  if(typed.trim() !== '重置'){ alert('输入不匹配，已取消重置。'); return; }
   State.data = seedData();
   Storage.save(State.data); render();
+  alert('已重置为示例数据。');
 }
 
 
@@ -3593,7 +3598,7 @@ function seedStrategy(){
       { id:'KPI003', name:'品牌GMV', target:500, current:380, unit:'万元', owner:'胡瑕', quarter:'Q2' },
       { id:'KPI004', name:'全平台搜索指数', target:15000, current:12500, unit:'', owner:'程园', quarter:'Q2' }
     ],
-    annualStrategy: `# 2026年青蛙王子品牌推广部年度战略\n\n## 战略主题\n"自然守护·亲子共长" — 以儿童健康为核心，构建中国最值得信赖的婴童护肤品牌生态。\n\n## 核心战略方向\n\n### 1. 品牌声量全面升级\n聚焦全域搜索指数与社交声量，从"知名品牌"升级为"首选品牌"。重点布局小红书、抖音、视频号三端内容矩阵，以科学成分+亲子情感双线驱动内容传播。\n\n### 2. 数字化营销提效\n建立品牌私域流量池，打通会员体系与电商平台数据，实现精准人群触达与再营销。目标全年会员DAU达8000，复购率提升15个百分点。\n\n### 3. 大促节点突破\n全年重点布局618、双11、年货节三大节点Campaign，单次Campaign GMV较2025年提升30%。强化KOL生态，建立长效达人合作机制。\n\n### 4. 品牌资产沉淀\n完成品牌VI 3.0升级，统一全渠道视觉语言。发布品牌白皮书，强化"天然·安全·科学"品牌心智。\n\n## 年度预算规划\n全年营销预算1270万元，KOL合作占比35%，线下活动25%，数字投放20%，视觉物料15%，其他5%。\n\n## 关键里程碑\n- Q1：品牌VI升级完成，会员2.0系统上线\n- Q2：618 Campaign突破，粉丝总量300万\n- Q3：暑期亲子Campaign，双平台破亿曝光\n- Q4：双11大促，年度品牌白皮书发布`,
+    annualStrategy: `# 2026年青蛙王子品牌部年度战略\n\n## 战略主题\n"自然守护·亲子共长" — 以儿童健康为核心，构建中国最值得信赖的婴童护肤品牌生态。\n\n## 核心战略方向\n\n### 1. 品牌声量全面升级\n聚焦全域搜索指数与社交声量，从"知名品牌"升级为"首选品牌"。重点布局小红书、抖音、视频号三端内容矩阵，以科学成分+亲子情感双线驱动内容传播。\n\n### 2. 数字化营销提效\n建立品牌私域流量池，打通会员体系与电商平台数据，实现精准人群触达与再营销。目标全年会员DAU达8000，复购率提升15个百分点。\n\n### 3. 大促节点突破\n全年重点布局618、双11、年货节三大节点Campaign，单次Campaign GMV较2025年提升30%。强化KOL生态，建立长效达人合作机制。\n\n### 4. 品牌资产沉淀\n完成品牌VI 3.0升级，统一全渠道视觉语言。发布品牌白皮书，强化"天然·安全·科学"品牌心智。\n\n## 年度预算规划\n全年营销预算1270万元，KOL合作占比35%，线下活动25%，数字投放20%，视觉物料15%，其他5%。\n\n## 关键里程碑\n- Q1：品牌VI升级完成，会员2.0系统上线\n- Q2：618 Campaign突破，粉丝总量300万\n- Q3：暑期亲子Campaign，双平台破亿曝光\n- Q4：双11大促，年度品牌白皮书发布`,
     brandHouse: {
       vision:'成为中国妈妈最信赖的天然婴童护肤品牌，让每一个孩子在爱与自然中健康成长。',
       mission:'以科学配方与天然成分，为0-12岁儿童提供安全、温和、有效的肌肤守护，让父母安心，让孩子快乐。',
@@ -3727,7 +3732,7 @@ function renderStrategy(){
   const s = State.data.strategy;
 
   if(State.strategyTab === 'okr'){
-    const qs = ['Q1','Q2','Q3','Q4','年度'].map(q =>
+    const qs = ['年度','Q1','Q2','Q3','Q4'].map(q =>
       `<button class="btn-sm${State.strategyQ===q?' btn':' btn ghost'}" onclick="State.strategyQ='${q}';renderStrategy()">${q}</button>`
     ).join('');
 
@@ -3746,7 +3751,7 @@ function renderStrategy(){
         return `<div style="margin-bottom:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <span style="font-size:13px;color:var(--ink-3);flex:1;">${kr.desc}</span>
-            <span style="font-size:12px;color:var(--muted);margin-left:12px;">${kr.owner}</span>
+            <span style="font-size:12px;color:var(--muted);margin-left:12px;">${kr.owner}${kr.collaborators?' <span style="color:var(--ink-4);">+'+kr.collaborators+'</span>':''}</span>
             <span style="font-size:13px;font-weight:600;margin-left:12px;min-width:36px;text-align:right;">${pct}%</span>
             <button class="btn-sm ghost" style="margin-left:8px;" onclick="editKR('${o.id}','${kr.id}')">编辑</button>
           </div>
@@ -3792,7 +3797,7 @@ function renderStrategy(){
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <div style="flex:1;">
               <div style="font-weight:700;font-size:15px;">${k.name}</div>
-              <span style="font-size:12px;color:var(--muted);">负责人 ${k.owner||'—'}</span>
+              <span style="font-size:12px;color:var(--muted);">负责人 ${k.owner||'—'}${k.collaborators?' · 协作 '+k.collaborators:''}</span>
             </div>
             <span class="pill ${pct>=80?'green':pct>=50?'yellow':'red'}">${pct}%</span>
             <div style="display:flex;gap:6px;margin-left:12px;">
@@ -3872,7 +3877,7 @@ function addOKR(){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>目标描述</label><input class="input" id="okr_obj" placeholder="例：Q2品牌声量全面提升" style="width:100%"></div>
     <div class="form-group"><label>季度</label><select class="select" id="okr_q" style="width:100%">
-      ${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}
+      ${['年度','Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}
     </select></div>
   `;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveNewOKR()">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
@@ -3897,7 +3902,7 @@ function editOKR(id){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>目标描述</label><input class="input" id="okr_edit_obj" value="${o.objective}" style="width:100%"></div>
     <div class="form-group"><label>季度</label><select class="select" id="okr_edit_q" style="width:100%">
-      ${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===o.quarter?'selected':''}>${q}</option>`).join('')}
+      ${['年度','Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===o.quarter?'selected':''}>${q}</option>`).join('')}
     </select></div>
   `;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveEditOKR('${id}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
@@ -3932,6 +3937,7 @@ function addKR(okrId){
       <div class="form-group"><label>当前值</label><input class="input" id="kr_current" type="number" value="0"></div>
     </div>
     <div class="form-group"><label>负责人</label><select class="select" id="kr_owner" style="width:100%">${emps}</select></div>
+    <div class="form-group"><label>协作人（多人用、分隔，可留空）</label><input class="input" id="kr_collab" placeholder="例：刘媛卿、耿雨阳" style="width:100%"></div>
   `;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveNewKR('${okrId}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
   openModal('modalGeneric');
@@ -3942,7 +3948,7 @@ function saveNewKR(okrId){
   if(!o) return;
   const desc = $('#kr_desc').value.trim();
   if(!desc){ alert('请填写关键结果描述'); return; }
-  o.keyResults.push({ id:'KR'+Date.now(), desc, target:Number($('#kr_target').value)||100, current:Number($('#kr_current').value)||0, owner:$('#kr_owner').value });
+  o.keyResults.push({ id:'KR'+Date.now(), desc, target:Number($('#kr_target').value)||100, current:Number($('#kr_current').value)||0, owner:$('#kr_owner').value, collaborators:$('#kr_collab').value.trim() });
   Storage.save(State.data);
   closeModal('modalGeneric');
   renderStrategy();
@@ -3963,6 +3969,7 @@ function editKR(okrId, krId){
       <div class="form-group"><label>当前值</label><input class="input" id="kr_edit_current" type="number" value="${kr.current}"></div>
     </div>
     <div class="form-group"><label>负责人</label><select class="select" id="kr_edit_owner" style="width:100%">${emps}</select></div>
+    <div class="form-group"><label>协作人（多人用、分隔，可留空）</label><input class="input" id="kr_edit_collab" value="${kr.collaborators||''}" placeholder="例：刘媛卿、耿雨阳" style="width:100%"></div>
   `;
   $('#modalGenericFoot').innerHTML = `
     <button class="btn" onclick="saveEditKR('${okrId}','${krId}')">保存</button>
@@ -3980,6 +3987,7 @@ function saveEditKR(okrId, krId){
   kr.target = Number($('#kr_edit_target').value)||1;
   kr.current = Number($('#kr_edit_current').value)||0;
   kr.owner = $('#kr_edit_owner').value;
+  kr.collaborators = $('#kr_edit_collab').value.trim();
   Storage.save(State.data);
   closeModal('modalGeneric');
   renderStrategy();
@@ -4009,8 +4017,9 @@ function addKPI(){
     </div>
     <div class="form-row">
       <div class="form-group"><label>负责人</label><select class="select" id="kpi_owner" style="width:100%">${emps}</select></div>
-      <div class="form-group"><label>季度</label><select class="select" id="kpi_q" style="width:100%">${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}</select></div>
-    </div>`;
+      <div class="form-group"><label>季度</label><select class="select" id="kpi_q" style="width:100%">${['年度','Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-group"><label>协作人（多人用、分隔，可留空）</label><input class="input" id="kpi_collab" placeholder="例：刘媛卿、耿雨阳" style="width:100%"></div>`;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveNewKPI()">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
   openModal('modalGeneric');
 }
@@ -4018,7 +4027,7 @@ function addKPI(){
 function saveNewKPI(){
   const name = $('#kpi_name').value.trim();
   if(!name){ alert('请填写指标名称'); return; }
-  State.data.strategy.kpis.push({ id:'KPI'+Date.now(), name, target:Number($('#kpi_target').value)||100, current:Number($('#kpi_current').value)||0, unit:$('#kpi_unit').value.trim(), owner:$('#kpi_owner').value, quarter:$('#kpi_q').value });
+  State.data.strategy.kpis.push({ id:'KPI'+Date.now(), name, target:Number($('#kpi_target').value)||100, current:Number($('#kpi_current').value)||0, unit:$('#kpi_unit').value.trim(), owner:$('#kpi_owner').value, collaborators:$('#kpi_collab').value.trim(), quarter:$('#kpi_q').value });
   Storage.save(State.data);
   closeModal('modalGeneric');
   renderStrategy();
@@ -4039,8 +4048,9 @@ function editKPI(id){
     </div>
     <div class="form-row">
       <div class="form-group"><label>负责人</label><select class="select" id="kpi_e_owner" style="width:100%">${emps}</select></div>
-      <div class="form-group"><label>季度</label><select class="select" id="kpi_e_q" style="width:100%">${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===k.quarter?'selected':''}>${q}</option>`).join('')}</select></div>
-    </div>`;
+      <div class="form-group"><label>季度</label><select class="select" id="kpi_e_q" style="width:100%">${['年度','Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===k.quarter?'selected':''}>${q}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-group"><label>协作人（多人用、分隔，可留空）</label><input class="input" id="kpi_e_collab" value="${k.collaborators||''}" placeholder="例：刘媛卿、耿雨阳" style="width:100%"></div>`;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveEditKPI('${id}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
   openModal('modalGeneric');
 }
@@ -4053,6 +4063,7 @@ function saveEditKPI(id){
   k.current = Number($('#kpi_e_current').value)||0;
   k.unit = $('#kpi_e_unit').value.trim();
   k.owner = $('#kpi_e_owner').value;
+  k.collaborators = $('#kpi_e_collab').value.trim();
   k.quarter = $('#kpi_e_q').value;
   Storage.save(State.data);
   closeModal('modalGeneric');
@@ -4068,7 +4079,7 @@ function deleteKPI(id){
 
 /* ===== KPI CSV 导入 / 模板 ===== */
 function downloadKPITemplate(){
-  const csv = '指标名称,目标值,当前值,单位,负责人,季度\n全网粉丝总量,300,215,万,耿雨阳,Q2';
+  const csv = '指标名称,目标值,当前值,单位,负责人,协作人,季度\n全网粉丝总量,300,215,万,耿雨阳,刘媛卿、李若琳,Q2';
   const blob = new Blob(['﻿'+csv],{type:'text/csv'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='KPI数据模板.csv'; a.click();
 }
@@ -4076,7 +4087,7 @@ function downloadKPITemplate(){
 function importKPICsv(){
   csvImportFlow({
     title:'导入 KPI 指标', sub:'KPI CSV',
-    rowToObj:(c,i)=> c[0] ? { id:'KPI'+Date.now()+i, name:c[0], target:Number(c[1])||100, current:Number(c[2])||0, unit:(c[3]||'').trim(), owner:c[4]||'', quarter:(c[5]||State.strategyQ).trim() } : null,
+    rowToObj:(c,i)=> c[0] ? { id:'KPI'+Date.now()+i, name:c[0], target:Number(c[1])||100, current:Number(c[2])||0, unit:(c[3]||'').trim(), owner:c[4]||'', collaborators:(c[5]||'').trim(), quarter:(c[6]||State.strategyQ).trim() } : null,
     onImport:(items)=>{ State.data.strategy.kpis.push(...items); },
     after:()=>renderStrategy()
   });
@@ -4084,9 +4095,9 @@ function importKPICsv(){
 
 /* ===== OKR CSV 导入 / 模板（平表自动归组：相同[目标+季度]的行归并到同一OKR） ===== */
 function downloadOKRTemplate(){
-  const csv = '目标Objective,季度,关键结果KR,目标值,当前值,负责人\n'
-    + 'Q2品牌声量全面提升,Q2,全平台搜索指数从12500提升至15000,15000,12500,程园\n'
-    + 'Q2品牌声量全面提升,Q2,小红书品牌词搜索量环比增长30%,30,18,刘媛卿';
+  const csv = '目标Objective,季度,关键结果KR,目标值,当前值,负责人,协作人\n'
+    + 'Q2品牌声量全面提升,Q2,全平台搜索指数从12500提升至15000,15000,12500,程园,刘媛卿\n'
+    + 'Q2品牌声量全面提升,Q2,小红书品牌词搜索量环比增长30%,30,18,刘媛卿,耿雨阳';
   const blob = new Blob(['﻿'+csv],{type:'text/csv'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='OKR数据模板.csv'; a.click();
 }
@@ -4095,13 +4106,13 @@ function importOKRCsv(){
   csvImportFlow({
     title:'导入 OKR 目标', sub:'OKR CSV',
     // 每行先转为中间结构，归组在 onImport 完成
-    rowToObj:(c,i)=> c[0] ? { _obj:c[0].trim(), _q:(c[1]||State.strategyQ).trim(), _desc:(c[2]||'').trim(), _target:Number(c[3])||100, _current:Number(c[4])||0, _owner:(c[5]||'').trim() } : null,
+    rowToObj:(c,i)=> c[0] ? { _obj:c[0].trim(), _q:(c[1]||State.strategyQ).trim(), _desc:(c[2]||'').trim(), _target:Number(c[3])||100, _current:Number(c[4])||0, _owner:(c[5]||'').trim(), _collab:(c[6]||'').trim() } : null,
     onImport:(rows)=>{
       rows.forEach((r,idx)=>{
         // 同[目标+季度]找现有OKR，没有则新建
         let o = State.data.strategy.okrs.find(x=>x.objective===r._obj && x.quarter===r._q);
         if(!o){ o = { id:'OKR'+Date.now()+idx, objective:r._obj, quarter:r._q, keyResults:[] }; State.data.strategy.okrs.push(o); }
-        if(r._desc) o.keyResults.push({ id:'KR'+Date.now()+idx, desc:r._desc, target:r._target, current:r._current, owner:r._owner });
+        if(r._desc) o.keyResults.push({ id:'KR'+Date.now()+idx, desc:r._desc, target:r._target, current:r._current, owner:r._owner, collaborators:r._collab });
       });
     },
     after:()=>renderStrategy()
@@ -6643,8 +6654,8 @@ function seedAnalytics(){
 function seedReports(){
   return {
     reports:[
-      { id:'RPT001', type:'周报', period:'2026-W22', title:'品牌推广部第22周工作周报', content:'【本周完成】\n1. 618主视觉KV初稿完成，已提交品牌经理审阅\n2. 抖音达人合作协议签署3家，预计6月10日开始投放\n3. 防晒系列产品拍摄完成，素材已交付设计团队\n\n【数据表现】\n- 小红书本周新增粉丝 +2,340，笔记互动率3.8%\n- 抖音账号播放量 128万，同比上周 +12%\n\n【下周计划】\n1. 618主视觉终稿确认\n2. 会员积分活动上线\n3. Q3品牌策略初稿提交', createdDate:'2026-06-01', status:'已发布' },
-      { id:'RPT002', type:'月报', period:'2026-05', title:'2026年5月品牌推广部月度工作报告', content:'【月度核心成果】\n1. 全平台粉丝达286万，环比增长3.2%\n2. 品牌搜索指数月均12,500，同比提升18.7%\n3. 5月GMV完成380万，月度目标达成率95%\n\n【重点项目进展】\n- 618大促Campaign已启动，整体推进至45%\n- 夏季防晒新品上市内容已完成60%\n- 会员体系2.0研发中，预计7月上线\n\n【预算执行】\n- 月度预算100万，已执行56.7万 (56.7%)\n- KOL合作超支预警，下月需控制支出\n\n【下月重点】\n618大促冲刺、防晒新品全面推广、Q3策略定稿', createdDate:'2026-06-01', status:'已发布' }
+      { id:'RPT001', type:'周报', period:'2026-W22', title:'品牌部第22周工作周报', content:'【本周完成】\n1. 618主视觉KV初稿完成，已提交品牌经理审阅\n2. 抖音达人合作协议签署3家，预计6月10日开始投放\n3. 防晒系列产品拍摄完成，素材已交付设计团队\n\n【数据表现】\n- 小红书本周新增粉丝 +2,340，笔记互动率3.8%\n- 抖音账号播放量 128万，同比上周 +12%\n\n【下周计划】\n1. 618主视觉终稿确认\n2. 会员积分活动上线\n3. Q3品牌策略初稿提交', createdDate:'2026-06-01', status:'已发布' },
+      { id:'RPT002', type:'月报', period:'2026-05', title:'2026年5月品牌部月度工作报告', content:'【月度核心成果】\n1. 全平台粉丝达286万，环比增长3.2%\n2. 品牌搜索指数月均12,500，同比提升18.7%\n3. 5月GMV完成380万，月度目标达成率95%\n\n【重点项目进展】\n- 618大促Campaign已启动，整体推进至45%\n- 夏季防晒新品上市内容已完成60%\n- 会员体系2.0研发中，预计7月上线\n\n【预算执行】\n- 月度预算100万，已执行56.7万 (56.7%)\n- KOL合作超支预警，下月需控制支出\n\n【下月重点】\n618大促冲刺、防晒新品全面推广、Q3策略定稿', createdDate:'2026-06-01', status:'已发布' }
     ],
     reviews:[
       { id:'REV001', projectName:'2026年五一假期品牌活动', projectType:'线下活动', content:{ goalReview:'活动目标：触达母婴消费者5000+，收集新会员300人。实际：触达4,800人（96%），新会员322人（107.3%），整体超额完成目标。', dataAnalysis:'活动高峰期为假期第2-3天，下午14:00-17:00客流最密集。互动区参与率78%，品牌拍照区分享率42%，显著带动线上搜索指数提升。', successFactors:'1. 选址商场客流量大，目标客群精准\n2. 儿科专家现场咨询引流效果显著\n3. 团队分工明确，执行流畅', improvePlan:'1. 现场Wi-Fi稳定性需提前确认\n2. 礼品数量准备略少，建议下次多备20%\n3. 活动物料提前2周到场布置', lessons:'大型节假日活动须提前60天启动筹备，供应商要有备选方案，现场要有专人负责舆情监控' }, createdDate:'2026-05-10' }
@@ -7628,7 +7639,7 @@ function autoGenerateWeeklyReport(){
   const sm = State.data.socialMedia;
   const smStr = sm ? Object.keys(sm).map(k=>{ const p=sm[k]; return `  - ${k}：粉丝${p.fans||'—'}，本周互动${p.interactions||'—'}`; }).join('\n') : '  (暂无社媒数据)';
 
-  const content = `【${week} 品牌推广部工作周报】
+  const content = `【${week} 品牌部工作周报】
 
 一、本周已完成工作
 ${doneList}
@@ -7652,7 +7663,7 @@ ${nextList}
     id:'RPT'+Date.now(),
     type:'周报',
     period:week,
-    title:`品牌推广部${week}工作周报`,
+    title:`品牌部${week}工作周报`,
     content,
     createdDate:new Date().toISOString().slice(0,10),
     status:'草稿'
