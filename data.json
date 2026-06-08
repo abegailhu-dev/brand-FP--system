@@ -924,7 +924,8 @@
         "current": 215,
         "unit": "万",
         "owner": "耿雨阳",
-        "quarter": "Q2"
+        "quarter": "Q2",
+        "op": "≥"
       },
       {
         "id": "KPI002",
@@ -933,7 +934,8 @@
         "current": 5620,
         "unit": "万",
         "owner": "刘媛卿",
-        "quarter": "Q2"
+        "quarter": "Q2",
+        "op": "≥"
       },
       {
         "id": "KPI003",
@@ -942,7 +944,8 @@
         "current": 380,
         "unit": "万元",
         "owner": "胡瑕",
-        "quarter": "Q2"
+        "quarter": "Q2",
+        "op": "≥"
       },
       {
         "id": "KPI004",
@@ -951,7 +954,8 @@
         "current": 12500,
         "unit": "",
         "owner": "程园",
-        "quarter": "Q2"
+        "quarter": "Q2",
+        "op": "≥"
       }
     ]
   },
@@ -2796,6 +2800,6 @@
       }
     ]
   },
-  "_publishedVersion": 1780915785112,
+  "_publishedVersion": 1780916162117,
   "budgetPassword": "888888"
 }

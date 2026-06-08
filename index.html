@@ -3593,10 +3593,10 @@ function seedStrategy(){
       }
     ],
     kpis: [
-      { id:'KPI001', name:'全网粉丝总量', target:300, current:215, unit:'万', owner:'耿雨阳', quarter:'Q2' },
-      { id:'KPI002', name:'品牌总曝光量', target:8000, current:5620, unit:'万', owner:'刘媛卿', quarter:'Q2' },
-      { id:'KPI003', name:'品牌GMV', target:500, current:380, unit:'万元', owner:'胡瑕', quarter:'Q2' },
-      { id:'KPI004', name:'全平台搜索指数', target:15000, current:12500, unit:'', owner:'程园', quarter:'Q2' }
+      { id:'KPI001', name:'全网粉丝总量', op:'≥', target:300, current:215, unit:'万', owner:'耿雨阳', quarter:'Q2' },
+      { id:'KPI002', name:'品牌总曝光量', op:'≥', target:8000, current:5620, unit:'万', owner:'刘媛卿', quarter:'Q2' },
+      { id:'KPI003', name:'品牌GMV', op:'≥', target:500, current:380, unit:'万元', owner:'胡瑕', quarter:'Q2' },
+      { id:'KPI004', name:'全平台搜索指数', op:'≥', target:15000, current:12500, unit:'', owner:'程园', quarter:'Q2' }
     ],
     annualStrategy: `# 2026年青蛙王子品牌部年度战略\n\n## 战略主题\n"自然守护·亲子共长" — 以儿童健康为核心，构建中国最值得信赖的婴童护肤品牌生态。\n\n## 核心战略方向\n\n### 1. 品牌声量全面升级\n聚焦全域搜索指数与社交声量，从"知名品牌"升级为"首选品牌"。重点布局小红书、抖音、视频号三端内容矩阵，以科学成分+亲子情感双线驱动内容传播。\n\n### 2. 数字化营销提效\n建立品牌私域流量池，打通会员体系与电商平台数据，实现精准人群触达与再营销。目标全年会员DAU达8000，复购率提升15个百分点。\n\n### 3. 大促节点突破\n全年重点布局618、双11、年货节三大节点Campaign，单次Campaign GMV较2025年提升30%。强化KOL生态，建立长效达人合作机制。\n\n### 4. 品牌资产沉淀\n完成品牌VI 3.0升级，统一全渠道视觉语言。发布品牌白皮书，强化"天然·安全·科学"品牌心智。\n\n## 年度预算规划\n全年营销预算1270万元，KOL合作占比35%，线下活动25%，数字投放20%，视觉物料15%，其他5%。\n\n## 关键里程碑\n- Q1：品牌VI升级完成，会员2.0系统上线\n- Q2：618 Campaign突破，粉丝总量300万\n- Q3：暑期亲子Campaign，双平台破亿曝光\n- Q4：双11大促，年度品牌白皮书发布`,
     brandHouse: {
@@ -3715,6 +3715,51 @@ function seedBrandAssets(){
  *  MODULE 02: STRATEGY & OKR
  * ============================================================ */
 
+/* #12b KPI 完成率与达成判定：支持 ≥ / > / ≤ / < 四种方向 */
+function kpiCompletion(k){
+  const op = k.op || '≥';
+  const cur = Number(k.current)||0, tgt = Number(k.target)||0;
+  let met, rate;
+  if(op === '≤' || op === '<'){
+    // 越低越好（如 CPM/CPE）：完成率 = 目标/当前
+    rate = cur>0 ? Math.round(tgt/cur*100) : (tgt>0?0:100);
+    met = op==='≤' ? cur<=tgt : cur<tgt;
+  } else {
+    // 越高越好：完成率 = 当前/目标
+    rate = tgt>0 ? Math.round(cur/tgt*100) : 100;
+    met = op==='≥' ? cur>=tgt : cur>tgt;
+  }
+  rate = Math.max(0, Math.min(999, rate));
+  return { op, rate, met };
+}
+
+/* #13 KR 按完成时间推导状态：按时完成/延后已完成/延后（暂未完成）/未完成 */
+function krTimeStatus(kr){
+  if(!kr.useTime) return null;
+  const due = kr.dueDate ? new Date(kr.dueDate) : null;
+  const done = kr.doneDate ? new Date(kr.doneDate) : null;
+  const now = new Date();
+  if(done){
+    if(due && done > due) return { label:'延后已完成', color:'#d97706', bg:'#fef3c7' };
+    return { label:'按时完成', color:'#059669', bg:'#d1fae5' };
+  }
+  if(due && now > due) return { label:'延后（暂未完成）', color:'#dc2626', bg:'#fee2e2' };
+  return { label:'未完成', color:'#64748b', bg:'#f1f5f9' };
+}
+
+/* #16 KR 多维进度：综合 目标值/完成时间/无纰漏 三个启用维度算单一百分比 */
+function krProgress(kr){
+  const parts = [];
+  if(kr.useValue !== false){ // 默认启用目标值维度（兼容旧数据）
+    const t = Number(kr.target)||1;
+    parts.push(Math.min(100, Math.round(Number(kr.current)/t*100)));
+  }
+  if(kr.useTime){ parts.push(kr.doneDate ? 100 : 0); }
+  if(kr.useQuality){ parts.push(kr.quality==='正常完成' ? 100 : (kr.quality==='有纰漏' ? 60 : 0)); }
+  if(!parts.length) return 0;
+  return Math.round(parts.reduce((a,b)=>a+b,0)/parts.length);
+}
+
 function renderStrategy(){
   if(!State.data.strategy) State.data.strategy = seedStrategy();
   if(!State.data.strategy.kpis) State.data.strategy.kpis = (seedStrategy().kpis || []);
@@ -3739,18 +3784,20 @@ function renderStrategy(){
     const okrs = s.okrs.filter(o => o.quarter === State.strategyQ);
 
     const okrCards = okrs.map(o => {
-      const overallPct = Math.round(o.keyResults.reduce((sum,kr) => {
-        const t = Number(kr.target)||1;
-        return sum + Math.min(100, Math.round(Number(kr.current)/t*100));
-      }, 0) / (o.keyResults.length||1));
+      const overallPct = Math.round(o.keyResults.reduce((sum,kr) => sum + krProgress(kr), 0) / (o.keyResults.length||1));
 
       const krRows = o.keyResults.map(kr => {
-        const t = Number(kr.target)||1;
-        const pct = Math.min(100, Math.round(Number(kr.current)/t*100));
+        const pct = krProgress(kr);
         const color = pct >= 80 ? 'var(--frog-mint)' : pct >= 50 ? 'var(--frog-yellow)' : 'var(--risk)';
+        const ts = krTimeStatus(kr);
+        const statusBadge = ts ? ` <span style="font-size:11px;padding:1px 8px;border-radius:10px;color:${ts.color};background:${ts.bg};">${ts.label}</span>` : '';
+        const meta = [];
+        if(kr.useValue !== false) meta.push(`当前 ${kr.current} / 目标 ${kr.target}`);
+        if(kr.useTime) meta.push(`计划 ${kr.dueDate||'—'}${kr.doneDate?' · 实际 '+kr.doneDate:''}`);
+        if(kr.useQuality) meta.push(`质量 ${kr.quality||'未评'}`);
         return `<div style="margin-bottom:14px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <span style="font-size:13px;color:var(--ink-3);flex:1;">${kr.desc}</span>
+            <span style="font-size:13px;color:var(--ink-3);flex:1;">${kr.desc}${statusBadge}</span>
             <span style="font-size:12px;color:var(--muted);margin-left:12px;">${kr.owner}${kr.collaborators?' <span style="color:var(--ink-4);">+'+kr.collaborators+'</span>':''}</span>
             <span style="font-size:13px;font-weight:600;margin-left:12px;min-width:36px;text-align:right;">${pct}%</span>
             <button class="btn-sm ghost" style="margin-left:8px;" onclick="editKR('${o.id}','${kr.id}')">编辑</button>
@@ -3759,7 +3806,7 @@ function renderStrategy(){
             <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .4s;"></div>
           </div>
           <div style="display:flex;justify-content:space-between;margin-top:2px;">
-            <span style="font-size:11px;color:var(--muted);">当前 ${kr.current} / 目标 ${kr.target}</span>
+            <span style="font-size:11px;color:var(--muted);">${meta.join('　·　')}</span>
           </div>
         </div>`;
       }).join('');
@@ -3790,25 +3837,27 @@ function renderStrategy(){
     if(State.goalTab === 'kpi'){
       const kpis = (s.kpis||[]).filter(k => k.quarter === State.strategyQ);
       const kpiCards = kpis.map(k => {
-        const t = Number(k.target)||1;
-        const pct = Math.min(100, Math.round(Number(k.current)/t*100));
-        const color = pct >= 80 ? 'var(--frog-mint)' : pct >= 50 ? 'var(--frog-yellow)' : 'var(--risk)';
+        const cp = kpiCompletion(k);
+        const bar = Math.min(100, cp.rate);
+        const color = cp.met ? 'var(--frog-mint)' : cp.rate >= 60 ? 'var(--frog-yellow)' : 'var(--risk)';
         return `<div class="card elevated" style="margin-bottom:16px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <div style="flex:1;">
-              <div style="font-weight:700;font-size:15px;">${k.name}</div>
+              <div style="font-weight:700;font-size:15px;">${k.name}
+                <span style="font-size:11px;padding:1px 8px;border-radius:10px;margin-left:8px;color:${cp.met?'#059669':'#dc2626'};background:${cp.met?'#d1fae5':'#fee2e2'};">${cp.met?'已达成':'未达成'}</span>
+              </div>
               <span style="font-size:12px;color:var(--muted);">负责人 ${k.owner||'—'}${k.collaborators?' · 协作 '+k.collaborators:''}</span>
             </div>
-            <span class="pill ${pct>=80?'green':pct>=50?'yellow':'red'}">${pct}%</span>
+            <span class="pill ${cp.met?'green':cp.rate>=60?'yellow':'red'}">完成率 ${cp.rate}%</span>
             <div style="display:flex;gap:6px;margin-left:12px;">
               <button class="btn-sm ghost" onclick="editKPI('${k.id}')">编辑</button>
               <button class="btn-sm ghost" style="color:var(--risk);" onclick="deleteKPI('${k.id}')">删除</button>
             </div>
           </div>
           <div style="background:var(--line-2);border-radius:4px;height:8px;overflow:hidden;">
-            <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .4s;"></div>
+            <div style="width:${bar}%;height:100%;background:${color};border-radius:4px;transition:width .4s;"></div>
           </div>
-          <div style="margin-top:4px;font-size:12px;color:var(--muted);">当前 ${k.current}${k.unit||''} / 目标 ${k.target}${k.unit||''}</div>
+          <div style="margin-top:4px;font-size:12px;color:var(--muted);">当前 ${k.current}${k.unit||''} ／ 目标 ${cp.op} ${k.target}${k.unit||''}</div>
         </div>`;
       }).join('') || `<div style="text-align:center;padding:48px;color:var(--muted);">暂无 ${State.strategyQ} KPI，点击右上角添加或导入CSV</div>`;
 
@@ -3842,6 +3891,21 @@ function renderStrategy(){
         <button class="btn" onclick="saveAnnualStrategy()">保存</button>
       </div>
       <textarea id="annualStrategyText" class="input" style="width:100%;min-height:480px;font-family:var(--font-mono);font-size:13px;line-height:1.8;resize:vertical;">${s.annualStrategy||''}</textarea>
+    </div>
+    <div class="card elevated" style="margin-top:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="card-title">配图（外部图片链接）</div>
+        <button class="btn ghost" onclick="addAnnualImage()">+ 添加图片链接</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">粘贴图床/OSS 等可公开访问的图片 URL，系统嵌入显示（不占本地存储）。</div>
+      <div class="grid grid-3">${(s.annualImages||[]).map((img,i)=>`
+        <div class="card" style="padding:8px;">
+          <img src="${img.url}" style="width:100%;height:140px;object-fit:cover;border-radius:6px;background:var(--line-2);" onerror="this.style.opacity=.3;this.alt='图片加载失败';">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+            <span style="font-size:12px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${img.caption||'未命名'}</span>
+            <button class="btn-sm ghost" style="color:var(--risk);" onclick="deleteAnnualImage(${i})">删除</button>
+          </div>
+        </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:12px;">暂无配图</div>'}</div>
     </div>`;
 
   } else if(State.strategyTab === 'house'){
@@ -3932,10 +3996,20 @@ function addKR(okrId){
   $('#modalGenericSub').textContent = '';
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>描述</label><input class="input" id="kr_desc" placeholder="例：全平台搜索指数从12500提升至15000" style="width:100%"></div>
+    <div class="form-group"><label>衡量维度（可多选）</label><div style="display:flex;gap:16px;font-size:13px;">
+      <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="kr_useValue" checked> 结果目标值</label>
+      <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="kr_useTime"> 结果完成时间</label>
+      <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="kr_useQuality"> 无纰漏正常完成</label>
+    </div></div>
     <div class="form-row">
       <div class="form-group"><label>目标值</label><input class="input" id="kr_target" type="number" value="100"></div>
       <div class="form-group"><label>当前值</label><input class="input" id="kr_current" type="number" value="0"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label>计划完成时间</label><input class="input" id="kr_due" type="date"></div>
+      <div class="form-group"><label>实际完成时间</label><input class="input" id="kr_done" type="date"></div>
+    </div>
+    <div class="form-group"><label>完成质量</label><select class="select" id="kr_quality" style="width:100%">${['未评','正常完成','有纰漏'].map(q=>`<option value="${q==='未评'?'':q}">${q}</option>`).join('')}</select></div>
     <div class="form-group"><label>负责人</label><select class="select" id="kr_owner" style="width:100%">${emps}</select></div>
     <div class="form-group"><label>协作人（多人用、分隔，可留空）</label><input class="input" id="kr_collab" placeholder="例：刘媛卿、耿雨阳" style="width:100%"></div>
   `;
@@ -3948,7 +4022,7 @@ function saveNewKR(okrId){
   if(!o) return;
   const desc = $('#kr_desc').value.trim();
   if(!desc){ alert('请填写关键结果描述'); return; }
-  o.keyResults.push({ id:'KR'+Date.now(), desc, target:Number($('#kr_target').value)||100, current:Number($('#kr_current').value)||0, owner:$('#kr_owner').value, collaborators:$('#kr_collab').value.trim() });
+  o.keyResults.push({ id:'KR'+Date.now(), desc, useValue:$('#kr_useValue').checked, useTime:$('#kr_useTime').checked, useQuality:$('#kr_useQuality').checked, target:Number($('#kr_target').value)||100, current:Number($('#kr_current').value)||0, dueDate:$('#kr_due').value, doneDate:$('#kr_done').value, quality:$('#kr_quality').value, owner:$('#kr_owner').value, collaborators:$('#kr_collab').value.trim() });
   Storage.save(State.data);
   closeModal('modalGeneric');
   renderStrategy();
@@ -3962,12 +4036,23 @@ function editKR(okrId, krId){
   const emps = activeEmployees().map(e=>`<option value="${e.name}" ${e.name===kr.owner?'selected':''}>${e.name}</option>`).join('');
   $('#modalGenericTitle').textContent = '编辑关键结果';
   $('#modalGenericSub').textContent = '';
+  const qOpts = ['未评','正常完成','有纰漏'].map(q=>{ const v=q==='未评'?'':q; return `<option value="${v}" ${v===(kr.quality||'')?'selected':''}>${q}</option>`; }).join('');
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>描述</label><input class="input" id="kr_edit_desc" value="${kr.desc}" style="width:100%"></div>
+    <div class="form-group"><label>衡量维度（可多选）</label><div style="display:flex;gap:16px;font-size:13px;">
+      <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="kr_edit_useValue" ${kr.useValue!==false?'checked':''}> 结果目标值</label>
+      <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="kr_edit_useTime" ${kr.useTime?'checked':''}> 结果完成时间</label>
+      <label style="display:flex;align-items:center;gap:4px;"><input type="checkbox" id="kr_edit_useQuality" ${kr.useQuality?'checked':''}> 无纰漏正常完成</label>
+    </div></div>
     <div class="form-row">
       <div class="form-group"><label>目标值</label><input class="input" id="kr_edit_target" type="number" value="${kr.target}"></div>
       <div class="form-group"><label>当前值</label><input class="input" id="kr_edit_current" type="number" value="${kr.current}"></div>
     </div>
+    <div class="form-row">
+      <div class="form-group"><label>计划完成时间</label><input class="input" id="kr_edit_due" type="date" value="${kr.dueDate||''}"></div>
+      <div class="form-group"><label>实际完成时间</label><input class="input" id="kr_edit_done" type="date" value="${kr.doneDate||''}"></div>
+    </div>
+    <div class="form-group"><label>完成质量</label><select class="select" id="kr_edit_quality" style="width:100%">${qOpts}</select></div>
     <div class="form-group"><label>负责人</label><select class="select" id="kr_edit_owner" style="width:100%">${emps}</select></div>
     <div class="form-group"><label>协作人（多人用、分隔，可留空）</label><input class="input" id="kr_edit_collab" value="${kr.collaborators||''}" placeholder="例：刘媛卿、耿雨阳" style="width:100%"></div>
   `;
@@ -3984,8 +4069,14 @@ function saveEditKR(okrId, krId){
   const kr = o.keyResults.find(x=>x.id===krId);
   if(!kr) return;
   kr.desc = $('#kr_edit_desc').value.trim();
+  kr.useValue = $('#kr_edit_useValue').checked;
+  kr.useTime = $('#kr_edit_useTime').checked;
+  kr.useQuality = $('#kr_edit_useQuality').checked;
   kr.target = Number($('#kr_edit_target').value)||1;
   kr.current = Number($('#kr_edit_current').value)||0;
+  kr.dueDate = $('#kr_edit_due').value;
+  kr.doneDate = $('#kr_edit_done').value;
+  kr.quality = $('#kr_edit_quality').value;
   kr.owner = $('#kr_edit_owner').value;
   kr.collaborators = $('#kr_edit_collab').value.trim();
   Storage.save(State.data);
@@ -4011,6 +4102,7 @@ function addKPI(){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>指标名称</label><input class="input" id="kpi_name" placeholder="例：全网粉丝总量" style="width:100%"></div>
     <div class="form-row">
+      <div class="form-group"><label>达成方向</label><select class="select" id="kpi_op" style="width:100%">${['≥','>','≤','<'].map(o=>`<option value="${o}">${o} (${o==='≥'||o==='>'?'越高越好':'越低越好'})</option>`).join('')}</select></div>
       <div class="form-group"><label>目标值</label><input class="input" id="kpi_target" type="number" value="100"></div>
       <div class="form-group"><label>当前值</label><input class="input" id="kpi_current" type="number" value="0"></div>
       <div class="form-group"><label>单位</label><input class="input" id="kpi_unit" placeholder="万/万元/%" value=""></div>
@@ -4027,7 +4119,7 @@ function addKPI(){
 function saveNewKPI(){
   const name = $('#kpi_name').value.trim();
   if(!name){ alert('请填写指标名称'); return; }
-  State.data.strategy.kpis.push({ id:'KPI'+Date.now(), name, target:Number($('#kpi_target').value)||100, current:Number($('#kpi_current').value)||0, unit:$('#kpi_unit').value.trim(), owner:$('#kpi_owner').value, collaborators:$('#kpi_collab').value.trim(), quarter:$('#kpi_q').value });
+  State.data.strategy.kpis.push({ id:'KPI'+Date.now(), name, op:$('#kpi_op').value, target:Number($('#kpi_target').value)||100, current:Number($('#kpi_current').value)||0, unit:$('#kpi_unit').value.trim(), owner:$('#kpi_owner').value, collaborators:$('#kpi_collab').value.trim(), quarter:$('#kpi_q').value });
   Storage.save(State.data);
   closeModal('modalGeneric');
   renderStrategy();
@@ -4042,6 +4134,7 @@ function editKPI(id){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>指标名称</label><input class="input" id="kpi_e_name" value="${k.name}" style="width:100%"></div>
     <div class="form-row">
+      <div class="form-group"><label>达成方向</label><select class="select" id="kpi_e_op" style="width:100%">${['≥','>','≤','<'].map(o=>`<option value="${o}" ${o===(k.op||'≥')?'selected':''}>${o} (${o==='≥'||o==='>'?'越高越好':'越低越好'})</option>`).join('')}</select></div>
       <div class="form-group"><label>目标值</label><input class="input" id="kpi_e_target" type="number" value="${k.target}"></div>
       <div class="form-group"><label>当前值</label><input class="input" id="kpi_e_current" type="number" value="${k.current}"></div>
       <div class="form-group"><label>单位</label><input class="input" id="kpi_e_unit" value="${k.unit||''}"></div>
@@ -4059,6 +4152,7 @@ function saveEditKPI(id){
   const k = State.data.strategy.kpis.find(x=>x.id===id);
   if(!k) return;
   k.name = $('#kpi_e_name').value.trim();
+  k.op = $('#kpi_e_op').value;
   k.target = Number($('#kpi_e_target').value)||1;
   k.current = Number($('#kpi_e_current').value)||0;
   k.unit = $('#kpi_e_unit').value.trim();
@@ -4079,7 +4173,7 @@ function deleteKPI(id){
 
 /* ===== KPI CSV 导入 / 模板 ===== */
 function downloadKPITemplate(){
-  const csv = '指标名称,目标值,当前值,单位,负责人,协作人,季度\n全网粉丝总量,300,215,万,耿雨阳,刘媛卿、李若琳,Q2';
+  const csv = '指标名称,达成方向,目标值,当前值,单位,负责人,协作人,季度\n全网粉丝总量,≥,300,215,万,耿雨阳,刘媛卿、李若琳,Q2\n内容CPM,≤,80,72,元,刘媛卿,,Q2';
   const blob = new Blob(['﻿'+csv],{type:'text/csv'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='KPI数据模板.csv'; a.click();
 }
@@ -4087,7 +4181,7 @@ function downloadKPITemplate(){
 function importKPICsv(){
   csvImportFlow({
     title:'导入 KPI 指标', sub:'KPI CSV',
-    rowToObj:(c,i)=> c[0] ? { id:'KPI'+Date.now()+i, name:c[0], target:Number(c[1])||100, current:Number(c[2])||0, unit:(c[3]||'').trim(), owner:c[4]||'', collaborators:(c[5]||'').trim(), quarter:(c[6]||State.strategyQ).trim() } : null,
+    rowToObj:(c,i)=>{ if(!c[0]) return null; const op=['≥','>','≤','<'].includes((c[1]||'').trim())?(c[1]||'').trim():'≥'; return { id:'KPI'+Date.now()+i, name:c[0], op, target:Number(c[2])||100, current:Number(c[3])||0, unit:(c[4]||'').trim(), owner:c[5]||'', collaborators:(c[6]||'').trim(), quarter:(c[7]||State.strategyQ).trim() }; },
     onImport:(items)=>{ State.data.strategy.kpis.push(...items); },
     after:()=>renderStrategy()
   });
@@ -4123,6 +4217,26 @@ function saveAnnualStrategy(){
   State.data.strategy.annualStrategy = $('#annualStrategyText').value;
   Storage.save(State.data);
   alert('年度战略文档已保存');
+}
+
+/* #15 年度战略文档配图（外部链接） */
+function addAnnualImage(){
+  const url = prompt('请粘贴图片链接（http/https 开头的可公开访问 URL）：');
+  if(url === null) return;
+  const u = url.trim();
+  if(!/^https?:\/\//i.test(u)){ alert('请填写以 http:// 或 https:// 开头的图片链接'); return; }
+  const caption = (prompt('图片说明（可留空）：') || '').trim();
+  if(!State.data.strategy.annualImages) State.data.strategy.annualImages = [];
+  State.data.strategy.annualImages.push({ url:u, caption });
+  Storage.save(State.data);
+  renderStrategy();
+}
+
+function deleteAnnualImage(i){
+  if(!confirm('确认删除该配图？')) return;
+  State.data.strategy.annualImages.splice(i, 1);
+  Storage.save(State.data);
+  renderStrategy();
 }
 
 function editBrandHouseField(key, label){
