@@ -1358,7 +1358,7 @@ input[type=file]{display:none;}
 
     <div class="sidebar-footer">
       <strong>品牌推广部 · 管理 OS v2.0</strong><br>
-      数据本地存储 · 可导出 JSON<br>
+      <span id="syncModeTip">数据本地存储 · 可导出 JSON</span><br>
       <span id="lastSavedTip">尚未修改</span>
     </div>
   </aside>
@@ -1591,8 +1591,12 @@ const Storage = {
   STORE: 'kv',
   _mem: null,
   _db: null,
+  _serverMode: false,   // true 当检测到局域网同步服务器
+  _serverVersion: 0,    // 服务器端数据版本号
+  _sse: null,           // SSE 连接
+  _saving: false,       // 防止 SSE 回调触发的 load 与正在进行的 save 冲突
 
-  /* ---- IndexedDB backend (主存储, 容量可达数百MB~GB级, 解决localStorage 5MB限制) ---- */
+  /* ---- IndexedDB backend ---- */
   _idbOpen(){
     if(this._db) return Promise.resolve(this._db);
     return new Promise((resolve, reject)=>{
@@ -1633,20 +1637,76 @@ const Storage = {
     }catch(_){return false;}
   },
 
+  /* ---- 服务器模式检测与 SSE 连接 ---- */
+  async detectServer(){
+    try{
+      const res = await fetch('/api/ping', {signal: AbortSignal.timeout(2000)});
+      if(res.ok){
+        const j = await res.json();
+        if(j.ok){ this._serverMode = true; this._serverVersion = j.version; return true; }
+      }
+    }catch(_){}
+    this._serverMode = false;
+    return false;
+  },
+
+  connectSSE(){
+    if(this._sse || !this._serverMode) return;
+    this._sse = new EventSource('/api/events');
+    this._sse.onmessage = async (ev) => {
+      try{
+        const msg = JSON.parse(ev.data);
+        if(msg.version && msg.version > this._serverVersion && !this._saving){
+          this._serverVersion = msg.version;
+          // 其他用户做了修改 → 拉取最新数据并刷新页面
+          const res = await fetch('/api/data');
+          if(res.ok){
+            const j = await res.json();
+            if(j.data){
+              State.data = j.data;
+              this._mem = j.data;
+              render();
+              this._updateTip('同步更新 · ' + new Date().toLocaleTimeString('zh-CN'));
+            }
+          }
+        }
+      }catch(_){}
+    };
+    this._sse.onerror = () => {
+      // 连接断开时尝试重连(浏览器 SSE 会自动重连)
+    };
+  },
+
+  _updateTip(text){
+    const tip = document.getElementById('lastSavedTip');
+    if(tip) tip.textContent = text;
+  },
+
+  /* ---- 核心 load / save ---- */
   async load(){
-    // 1) IndexedDB 优先 (大容量主存储)
+    // 服务器模式: 优先从服务器加载
+    if(this._serverMode){
+      try{
+        const res = await fetch('/api/data');
+        if(res.ok){
+          const j = await res.json();
+          if(j.data){ this._serverVersion = j.version; this._mem = j.data; return j.data; }
+        }
+      }catch(_){}
+    }
+    // 本地 IndexedDB
     try{
       const v = await this._idbGet(this.KEY);
       if(v) return typeof v === 'string' ? JSON.parse(v) : v;
     }catch(_){}
-    // 2) 宿主 window.storage
+    // 宿主 window.storage
     try{
       if(await this._useWindowStorage()){
         const r = await window.storage.get(this.KEY);
         if(r && r.value) return JSON.parse(r.value);
       }
     }catch(_){}
-    // 3) localStorage (旧数据自动迁移来源)
+    // localStorage (旧数据迁移)
     try{
       if(await this._useLocalStorage()){
         const v = localStorage.getItem(this.KEY);
@@ -1659,17 +1719,30 @@ const Storage = {
 
   async save(data){
     this._mem = data;
+    this._saving = true;
     const s = JSON.stringify(data);
+
+    // 服务器模式: 写入服务器 (服务器会广播通知其他客户端)
+    if(this._serverMode){
+      try{
+        const res = await fetch('/api/save', {method:'POST', headers:{'Content-Type':'application/json'}, body:s});
+        if(res.ok){
+          const j = await res.json();
+          this._serverVersion = j.version;
+          this._updateTip('已同步 · ' + new Date().toLocaleTimeString('zh-CN'));
+          this._saving = false;
+          return;
+        }
+      }catch(_){}
+    }
+
+    // 本地存储 (单机模式或服务器写入失败时的回退)
     let idbOk = false;
-    // 1) IndexedDB 主存储
     try{ await this._idbSet(this.KEY, s); idbOk = true; }catch(_){}
-    // 2) 宿主 window.storage (存在则同步一份)
     try{ if(await this._useWindowStorage()) await window.storage.set(this.KEY, s); }catch(_){}
-    // 3) IndexedDB 不可用时才回退 localStorage (避免大数据触发 5MB 配额错误)
     if(!idbOk){ try{ if(await this._useLocalStorage()) localStorage.setItem(this.KEY, s); }catch(err){ if(err && err.name === 'QuotaExceededError') alert('本地存储已满 (localStorage 约5MB上限)。建议导出JSON备份，或改用图片链接而非内嵌图片。'); } }
-    const t = new Date().toLocaleTimeString('zh-CN');
-    const tip = document.getElementById('lastSavedTip');
-    if(tip) tip.textContent = '最后保存 · ' + t;
+    this._updateTip('本地保存 · ' + new Date().toLocaleTimeString('zh-CN'));
+    this._saving = false;
   }
 };
 
@@ -1825,12 +1898,45 @@ function initials(name){
   return name.replace(/\s/g,'').slice(0, 2);
 }
 
+/* 修复结构不规范的员工记录(兼容历史错误导入), 防止人才模块白屏 */
+function normalizeEmployees(){
+  const emps = (State.data && State.data.employees) || [];
+  emps.forEach(e=>{
+    // 个人能力维度
+    if(!e.personal || typeof e.personal !== 'object') e.personal = {};
+    const pHasCN = PERSONAL_DIMS.some(d => d in e.personal);
+    if(!pHasCN){
+      const vals = Object.values(e.personal); // 旧英文键导入→按顺序还原数值
+      const np = {};
+      PERSONAL_DIMS.forEach((d,k)=> np[d] = (typeof vals[k] === 'number' ? vals[k] : 7));
+      e.personal = np;
+    } else {
+      PERSONAL_DIMS.forEach(d=>{ if(typeof e.personal[d] !== 'number') e.personal[d] = 7; });
+    }
+    // 岗位胜任维度
+    const qHasCN = e.position_scores && POSITION_DIMS.some(d => d in e.position_scores);
+    if(!qHasCN){
+      const old = e.position_scores || e.positionFit || {};
+      const vals = Object.values(old);
+      const nq = {};
+      POSITION_DIMS.forEach((d,k)=> nq[d] = (typeof vals[k] === 'number' ? vals[k] : 7));
+      e.position_scores = nq;
+    } else {
+      POSITION_DIMS.forEach(d=>{ if(typeof e.position_scores[d] !== 'number') e.position_scores[d] = 7; });
+    }
+    delete e.positionFit;
+    if(!e.status) e.status = '在岗';
+    if(typeof e.yearsInRole !== 'number') e.yearsInRole = parseFloat(e.yearsInRole) || 1;
+    if(!e.group) e.group = '/';
+  });
+}
+
 function avgPersonal(emp){
-  if(emp.status === '空缺') return 0;
+  if(emp.status === '空缺' || !emp.personal) return 0;
   return avg(PERSONAL_DIMS.map(d => emp.personal[d] || 0));
 }
 function avgPosition(emp){
-  if(emp.status === '空缺') return 0;
+  if(emp.status === '空缺' || !emp.position_scores) return 0;
   return avg(POSITION_DIMS.map(d => emp.position_scores[d] || 0));
 }
 
@@ -2975,22 +3081,32 @@ function talentManageHTML(){
 }
 
 function downloadTalentTemplate(){
-  const csv = 'ID,姓名,岗位,小组,状态,入岗年限,创新力,表达力,执行力,逻辑力,审美力,协作力,学习力\nEMP099,张三,品牌文案策划,策略与内容组,在岗,2,4,3.5,4,3,4,3.5,4';
+  // 列顺序必须与导入解析一致: 基本信息6列 + 个人7维 + 岗位7维 (分数1-10)
+  const header = ['ID','姓名','岗位','小组','状态','入岗年限',
+    ...PERSONAL_DIMS, ...POSITION_DIMS].join(',');
+  const sample = 'EMP099,张三,品牌文案策划,策略与内容组,在岗,2,8,7,8,7,8,7,7,8,7,8,7,8,7,8';
+  const csv = header + '\n' + sample;
   const blob = new Blob(['﻿'+csv],{type:'text/csv'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='人才数据模板.csv'; a.click();
 }
 
 function importTalentCsv(){
+  const P = PERSONAL_DIMS, Q = POSITION_DIMS; // 7 + 7 维度(中文键名)
   csvImportFlow({
     title:'导入员工数据', sub:'TALENT CSV IMPORT',
     rowToObj(c,i){
-      if(c.length<4||!c[1].trim()) return null;
+      if(c.length<2||!c[1] || !c[1].trim()) return null;
+      const num = (v, def) => { const n = parseFloat(v); return isNaN(n) ? def : n; };
+      const personal = {}, position_scores = {};
+      // 列: 0=ID 1=姓名 2=岗位 3=小组 4=状态 5=入岗年限 6~12=个人7维 13~19=岗位7维
+      P.forEach((d,k)=> personal[d] = num(c[6+k], 7));
+      Q.forEach((d,k)=> position_scores[d] = num(c[13+k], 7));
       return {
-        id:c[0].trim()||'EMP'+Date.now()+i, name:c[1].trim(), position:c[2]||'', group:c[3]||'',
-        status:c[4]||'在岗', yearsInRole:+c[5]||0,
-        personal:{innovation:+c[6]||3, expression:+c[7]||3, execution:+c[8]||3, logic:+c[9]||3, aesthetics:+c[10]||3, collaboration:+c[11]||3, learning:+c[12]||3},
-        positionFit:{strategy:3, creativity:3, dataAnalysis:3, execution:3, communication:3, leadership:3, techSavvy:3},
-        potential:'B', flightRisk:'低', devPlan:[], notes:''
+        id:(c[0]||'').trim()||'EMP'+Date.now()+i,
+        name:c[1].trim(), position:(c[2]||'').trim(), group:(c[3]||'').trim()||'/',
+        status:(c[4]||'在岗').trim(), yearsInRole:num(c[5],1),
+        personal, position_scores,
+        joinDate:'', notes:'', lastReview:''
       };
     },
     onImport(items){
@@ -3001,7 +3117,7 @@ function importTalentCsv(){
       });
       Storage.save(State.data);
     },
-    after(){ renderTalentModule(); setTimeout(postRenderTalent,60); }
+    after(){ State.talentSubView='talent-manage'; renderTalentModule(); setTimeout(postRenderTalent,60); }
   });
 }
 
@@ -3471,12 +3587,6 @@ function seedStrategy(){
         ]
       }
     ],
-    kpis: [
-      { id:'KPI001', name:'全网粉丝总量', target:300, current:215, unit:'万', owner:'耿雨阳', quarter:'Q2' },
-      { id:'KPI002', name:'品牌总曝光量', target:8000, current:5620, unit:'万', owner:'刘媛卿', quarter:'Q2' },
-      { id:'KPI003', name:'品牌GMV', target:500, current:380, unit:'万元', owner:'胡瑕', quarter:'Q2' },
-      { id:'KPI004', name:'全平台搜索指数', target:15000, current:12500, unit:'', owner:'程园', quarter:'Q2' }
-    ],
     annualStrategy: `# 2026年青蛙王子品牌推广部年度战略\n\n## 战略主题\n"自然守护·亲子共长" — 以儿童健康为核心，构建中国最值得信赖的婴童护肤品牌生态。\n\n## 核心战略方向\n\n### 1. 品牌声量全面升级\n聚焦全域搜索指数与社交声量，从"知名品牌"升级为"首选品牌"。重点布局小红书、抖音、视频号三端内容矩阵，以科学成分+亲子情感双线驱动内容传播。\n\n### 2. 数字化营销提效\n建立品牌私域流量池，打通会员体系与电商平台数据，实现精准人群触达与再营销。目标全年会员DAU达8000，复购率提升15个百分点。\n\n### 3. 大促节点突破\n全年重点布局618、双11、年货节三大节点Campaign，单次Campaign GMV较2025年提升30%。强化KOL生态，建立长效达人合作机制。\n\n### 4. 品牌资产沉淀\n完成品牌VI 3.0升级，统一全渠道视觉语言。发布品牌白皮书，强化"天然·安全·科学"品牌心智。\n\n## 年度预算规划\n全年营销预算1270万元，KOL合作占比35%，线下活动25%，数字投放20%，视觉物料15%，其他5%。\n\n## 关键里程碑\n- Q1：品牌VI升级完成，会员2.0系统上线\n- Q2：618 Campaign突破，粉丝总量300万\n- Q3：暑期亲子Campaign，双平台破亿曝光\n- Q4：双11大促，年度品牌白皮书发布`,
     brandHouse: {
       vision:'成为中国妈妈最信赖的天然婴童护肤品牌，让每一个孩子在爱与自然中健康成长。',
@@ -3596,13 +3706,11 @@ function seedBrandAssets(){
 
 function renderStrategy(){
   if(!State.data.strategy) State.data.strategy = seedStrategy();
-  if(!State.data.strategy.kpis) State.data.strategy.kpis = (seedStrategy().kpis || []);
   State.strategyTab = State.strategyTab || 'okr';
   State.strategyQ = State.strategyQ || 'Q2';
-  State.goalTab = State.goalTab || 'kpi';
 
   const tabs = [
-    { key:'okr', label:'目标看板' },
+    { key:'okr', label:'OKR 目标看板' },
     { key:'annual', label:'年度战略文档' },
     { key:'house', label:'品牌屋' }
   ].map(t => `<div class="sub-tab${State.strategyTab===t.key?' active':''}" onclick="State.strategyTab='${t.key}';renderStrategy()">${t.label}</div>`).join('');
@@ -3611,7 +3719,7 @@ function renderStrategy(){
   const s = State.data.strategy;
 
   if(State.strategyTab === 'okr'){
-    const qs = ['Q1','Q2','Q3','Q4','年度'].map(q =>
+    const qs = ['Q1','Q2','Q3','Q4'].map(q =>
       `<button class="btn-sm${State.strategyQ===q?' btn':' btn ghost'}" onclick="State.strategyQ='${q}';renderStrategy()">${q}</button>`
     ).join('');
 
@@ -3659,60 +3767,11 @@ function renderStrategy(){
       </div>`;
     }).join('') || `<div style="text-align:center;padding:48px;color:var(--muted);">暂无 ${State.strategyQ} OKR，点击右上角添加</div>`;
 
-    // 内层 KPI / OKR 切换
-    const goalTabs = [
-      { key:'kpi', label:'KPI 指标' },
-      { key:'okr', label:'OKR 目标' }
-    ].map(t => `<div class="sub-tab${State.goalTab===t.key?' active':''}" style="font-size:12px;padding:6px 14px;" onclick="State.goalTab='${t.key}';renderStrategy()">${t.label}</div>`).join('');
-
-    let goalBody = '';
-    if(State.goalTab === 'kpi'){
-      const kpis = (s.kpis||[]).filter(k => k.quarter === State.strategyQ);
-      const kpiCards = kpis.map(k => {
-        const t = Number(k.target)||1;
-        const pct = Math.min(100, Math.round(Number(k.current)/t*100));
-        const color = pct >= 80 ? 'var(--frog-mint)' : pct >= 50 ? 'var(--frog-yellow)' : 'var(--risk)';
-        return `<div class="card elevated" style="margin-bottom:16px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <div style="flex:1;">
-              <div style="font-weight:700;font-size:15px;">${k.name}</div>
-              <span style="font-size:12px;color:var(--muted);">负责人 ${k.owner||'—'}</span>
-            </div>
-            <span class="pill ${pct>=80?'green':pct>=50?'yellow':'red'}">${pct}%</span>
-            <div style="display:flex;gap:6px;margin-left:12px;">
-              <button class="btn-sm ghost" onclick="editKPI('${k.id}')">编辑</button>
-              <button class="btn-sm ghost" style="color:var(--risk);" onclick="deleteKPI('${k.id}')">删除</button>
-            </div>
-          </div>
-          <div style="background:var(--line-2);border-radius:4px;height:8px;overflow:hidden;">
-            <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .4s;"></div>
-          </div>
-          <div style="margin-top:4px;font-size:12px;color:var(--muted);">当前 ${k.current}${k.unit||''} / 目标 ${k.target}${k.unit||''}</div>
-        </div>`;
-      }).join('') || `<div style="text-align:center;padding:48px;color:var(--muted);">暂无 ${State.strategyQ} KPI，点击右上角添加或导入CSV</div>`;
-
-      goalBody = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <div style="display:flex;gap:6px;">${qs}</div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn ghost" onclick="downloadKPITemplate()">📥 CSV模板</button>
-          <button class="btn ghost" onclick="importKPICsv()">📤 导入CSV</button>
-          <button class="btn" onclick="addKPI()">+ 新增KPI</button>
-        </div>
-      </div>
-      ${kpiCards}`;
-    } else {
-      goalBody = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <div style="display:flex;gap:6px;">${qs}</div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn ghost" onclick="downloadOKRTemplate()">📥 CSV模板</button>
-          <button class="btn ghost" onclick="importOKRCsv()">📤 导入CSV</button>
-          <button class="btn" onclick="addOKR()">+ 新增目标</button>
-        </div>
-      </div>
-      ${okrCards}`;
-    }
-
-    body = `<div style="display:flex;gap:6px;margin-bottom:20px;">${goalTabs}</div>${goalBody}`;
+    body = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <div style="display:flex;gap:6px;">${qs}</div>
+      <button class="btn" onclick="addOKR()">+ 新增目标</button>
+    </div>
+    ${okrCards}`;
 
   } else if(State.strategyTab === 'annual'){
     body = `<div class="card elevated">
@@ -3756,7 +3815,7 @@ function addOKR(){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>目标描述</label><input class="input" id="okr_obj" placeholder="例：Q2品牌声量全面提升" style="width:100%"></div>
     <div class="form-group"><label>季度</label><select class="select" id="okr_q" style="width:100%">
-      ${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}
+      ${['Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}
     </select></div>
   `;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveNewOKR()">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
@@ -3781,7 +3840,7 @@ function editOKR(id){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>目标描述</label><input class="input" id="okr_edit_obj" value="${o.objective}" style="width:100%"></div>
     <div class="form-group"><label>季度</label><select class="select" id="okr_edit_q" style="width:100%">
-      ${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===o.quarter?'selected':''}>${q}</option>`).join('')}
+      ${['Q1','Q2','Q3','Q4'].map(q=>`<option value="${q}" ${q===o.quarter?'selected':''}>${q}</option>`).join('')}
     </select></div>
   `;
   $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveEditOKR('${id}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
@@ -3877,119 +3936,6 @@ function deleteKR(okrId, krId){
   Storage.save(State.data);
   closeModal('modalGeneric');
   renderStrategy();
-}
-
-/* ===== KPI 指标 增删改 ===== */
-function addKPI(){
-  const emps = activeEmployees().map(e=>`<option value="${e.name}">${e.name}</option>`).join('');
-  $('#modalGenericTitle').textContent = '新增 KPI 指标';
-  $('#modalGenericSub').textContent = State.strategyQ;
-  $('#modalGenericBody').innerHTML = `
-    <div class="form-group"><label>指标名称</label><input class="input" id="kpi_name" placeholder="例：全网粉丝总量" style="width:100%"></div>
-    <div class="form-row">
-      <div class="form-group"><label>目标值</label><input class="input" id="kpi_target" type="number" value="100"></div>
-      <div class="form-group"><label>当前值</label><input class="input" id="kpi_current" type="number" value="0"></div>
-      <div class="form-group"><label>单位</label><input class="input" id="kpi_unit" placeholder="万/万元/%" value=""></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>负责人</label><select class="select" id="kpi_owner" style="width:100%">${emps}</select></div>
-      <div class="form-group"><label>季度</label><select class="select" id="kpi_q" style="width:100%">${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===State.strategyQ?'selected':''}>${q}</option>`).join('')}</select></div>
-    </div>`;
-  $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveNewKPI()">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
-  openModal('modalGeneric');
-}
-
-function saveNewKPI(){
-  const name = $('#kpi_name').value.trim();
-  if(!name){ alert('请填写指标名称'); return; }
-  State.data.strategy.kpis.push({ id:'KPI'+Date.now(), name, target:Number($('#kpi_target').value)||100, current:Number($('#kpi_current').value)||0, unit:$('#kpi_unit').value.trim(), owner:$('#kpi_owner').value, quarter:$('#kpi_q').value });
-  Storage.save(State.data);
-  closeModal('modalGeneric');
-  renderStrategy();
-}
-
-function editKPI(id){
-  const k = State.data.strategy.kpis.find(x=>x.id===id);
-  if(!k) return;
-  const emps = activeEmployees().map(e=>`<option value="${e.name}" ${e.name===k.owner?'selected':''}>${e.name}</option>`).join('');
-  $('#modalGenericTitle').textContent = '编辑 KPI 指标';
-  $('#modalGenericSub').textContent = k.quarter;
-  $('#modalGenericBody').innerHTML = `
-    <div class="form-group"><label>指标名称</label><input class="input" id="kpi_e_name" value="${k.name}" style="width:100%"></div>
-    <div class="form-row">
-      <div class="form-group"><label>目标值</label><input class="input" id="kpi_e_target" type="number" value="${k.target}"></div>
-      <div class="form-group"><label>当前值</label><input class="input" id="kpi_e_current" type="number" value="${k.current}"></div>
-      <div class="form-group"><label>单位</label><input class="input" id="kpi_e_unit" value="${k.unit||''}"></div>
-    </div>
-    <div class="form-row">
-      <div class="form-group"><label>负责人</label><select class="select" id="kpi_e_owner" style="width:100%">${emps}</select></div>
-      <div class="form-group"><label>季度</label><select class="select" id="kpi_e_q" style="width:100%">${['Q1','Q2','Q3','Q4','年度'].map(q=>`<option value="${q}" ${q===k.quarter?'selected':''}>${q}</option>`).join('')}</select></div>
-    </div>`;
-  $('#modalGenericFoot').innerHTML = `<button class="btn" onclick="saveEditKPI('${id}')">保存</button><button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button>`;
-  openModal('modalGeneric');
-}
-
-function saveEditKPI(id){
-  const k = State.data.strategy.kpis.find(x=>x.id===id);
-  if(!k) return;
-  k.name = $('#kpi_e_name').value.trim();
-  k.target = Number($('#kpi_e_target').value)||1;
-  k.current = Number($('#kpi_e_current').value)||0;
-  k.unit = $('#kpi_e_unit').value.trim();
-  k.owner = $('#kpi_e_owner').value;
-  k.quarter = $('#kpi_e_q').value;
-  Storage.save(State.data);
-  closeModal('modalGeneric');
-  renderStrategy();
-}
-
-function deleteKPI(id){
-  if(!confirm('确认删除该 KPI 指标？')) return;
-  State.data.strategy.kpis = State.data.strategy.kpis.filter(x=>x.id!==id);
-  Storage.save(State.data);
-  renderStrategy();
-}
-
-/* ===== KPI CSV 导入 / 模板 ===== */
-function downloadKPITemplate(){
-  const csv = '指标名称,目标值,当前值,单位,负责人,季度\n全网粉丝总量,300,215,万,耿雨阳,Q2';
-  const blob = new Blob(['﻿'+csv],{type:'text/csv'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='KPI数据模板.csv'; a.click();
-}
-
-function importKPICsv(){
-  csvImportFlow({
-    title:'导入 KPI 指标', sub:'KPI CSV',
-    rowToObj:(c,i)=> c[0] ? { id:'KPI'+Date.now()+i, name:c[0], target:Number(c[1])||100, current:Number(c[2])||0, unit:(c[3]||'').trim(), owner:c[4]||'', quarter:(c[5]||State.strategyQ).trim() } : null,
-    onImport:(items)=>{ State.data.strategy.kpis.push(...items); },
-    after:()=>renderStrategy()
-  });
-}
-
-/* ===== OKR CSV 导入 / 模板（平表自动归组：相同[目标+季度]的行归并到同一OKR） ===== */
-function downloadOKRTemplate(){
-  const csv = '目标Objective,季度,关键结果KR,目标值,当前值,负责人\n'
-    + 'Q2品牌声量全面提升,Q2,全平台搜索指数从12500提升至15000,15000,12500,程园\n'
-    + 'Q2品牌声量全面提升,Q2,小红书品牌词搜索量环比增长30%,30,18,刘媛卿';
-  const blob = new Blob(['﻿'+csv],{type:'text/csv'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='OKR数据模板.csv'; a.click();
-}
-
-function importOKRCsv(){
-  csvImportFlow({
-    title:'导入 OKR 目标', sub:'OKR CSV',
-    // 每行先转为中间结构，归组在 onImport 完成
-    rowToObj:(c,i)=> c[0] ? { _obj:c[0].trim(), _q:(c[1]||State.strategyQ).trim(), _desc:(c[2]||'').trim(), _target:Number(c[3])||100, _current:Number(c[4])||0, _owner:(c[5]||'').trim() } : null,
-    onImport:(rows)=>{
-      rows.forEach((r,idx)=>{
-        // 同[目标+季度]找现有OKR，没有则新建
-        let o = State.data.strategy.okrs.find(x=>x.objective===r._obj && x.quarter===r._q);
-        if(!o){ o = { id:'OKR'+Date.now()+idx, objective:r._obj, quarter:r._q, keyResults:[] }; State.data.strategy.okrs.push(o); }
-        if(r._desc) o.keyResults.push({ id:'KR'+Date.now()+idx, desc:r._desc, target:r._target, current:r._current, owner:r._owner });
-      });
-    },
-    after:()=>renderStrategy()
-  });
 }
 
 function saveAnnualStrategy(){
@@ -7692,35 +7638,54 @@ async function fetchPublishedData(){
 }
 
 async function init(){
-  const saved = await Storage.load();
-  const published = await fetchPublishedData();
+  // 1) 检测局域网同步服务器
+  const hasServer = await Storage.detectServer();
 
-  if(published){
-    // 发布模式：按版本号决定是否采用最新发布数据
-    const pv = published._publishedVersion || 0;
-    const bv = (saved && saved._baseVersion) || 0;
-    if(!saved || pv > bv){
-      // 仓库里有更新的发布版本 → 所有人采用最新发布数据
-      published._baseVersion = pv;
-      State.data = published;
-      await Storage.save(State.data);
-    } else {
-      // 本地数据基于的版本不旧于发布版本 → 保留本地编辑（维护者未导出的改动）
-      State.data = saved;
-    }
-  } else {
-    // 无发布数据源 → 沿用本地存储或演示数据
+  // 2) 加载数据 (服务器模式→从服务器; 单机模式→本地存储/data.json/演示数据)
+  const saved = await Storage.load();
+
+  if(hasServer){
+    // 服务器模式: 数据来自服务器共享文件, 所有人看同一份
     State.data = saved || seedData();
     if(!saved) await Storage.save(State.data);
+  } else {
+    // 单机/GitHub Pages 模式: 支持 data.json 发布机制
+    const published = await fetchPublishedData();
+    if(published){
+      const pv = published._publishedVersion || 0;
+      const bv = (saved && saved._baseVersion) || 0;
+      if(!saved || pv > bv){
+        published._baseVersion = pv;
+        State.data = published;
+        await Storage.save(State.data);
+      } else {
+        State.data = saved;
+      }
+    } else {
+      State.data = saved || seedData();
+      if(!saved) await Storage.save(State.data);
+    }
   }
 
-  // Ensure required data structures exist
+  // 3) 确保必须的数据结构存在
   if(!State.data.tasks) State.data.tasks = seedData().tasks;
   if(!State.data.taskPool) State.data.taskPool = seedData().taskPool;
   if(!State.data.dashboardData) State.data.dashboardData = seedData().dashboardData;
   if(!State.data.currentWeek) State.data.currentWeek = '2026-W23';
+  normalizeEmployees(); // 修复历史错误导入的员工数据, 防止白屏
+
+  // 4) 启动界面
   bindNav();
   render();
+
+  // 5) 服务器模式: 建立 SSE 实时推送连接 + 更新状态提示
+  if(hasServer){
+    Storage.connectSSE();
+    const modeTip = document.getElementById('syncModeTip');
+    if(modeTip) modeTip.textContent = '🟢 局域网实时同步模式';
+    const tip = document.getElementById('lastSavedTip');
+    if(tip) tip.textContent = '已连接同步服务器';
+  }
 }
 
 window.addEventListener('DOMContentLoaded', init);
