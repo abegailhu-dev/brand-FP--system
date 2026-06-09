@@ -1101,6 +1101,12 @@ input[type=file]{display:none;}
   transition:all .15s;
 }
 .sub-tab:hover{color:var(--ink);}
+/* Batch delete */
+.batch-bar{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;border-radius:14px;padding:10px 22px;display:flex;align-items:center;gap:14px;box-shadow:0 6px 24px rgba(0,0,0,.4);z-index:9999;font-size:13px;font-weight:600;white-space:nowrap;}
+.batch-bar.hidden{display:none;}
+.batch-del{background:#ef4444;color:#fff;border:none;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;}
+.batch-cancel{background:transparent;color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.35);padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;}
+.batch-check{width:16px;height:16px;accent-color:var(--frog-blue,#5BA8D6);cursor:pointer;flex-shrink:0;vertical-align:middle;}
 .sub-tab.active{color:var(--ink); border-bottom-color:var(--ink);}
 
 /* Calendar grid */
@@ -2566,6 +2572,7 @@ function renderTasks(){
       <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;">
         <div class="card-title" style="margin:0;">任务明细 · TASK DETAILS</div>
         <div class="spacer" style="flex:1;"></div>
+        <button class="btn ghost sm" onclick="batchToggle('tasks',renderTasks)" style="${State.batchMod==='tasks'?'background:var(--frog-blue);color:#fff;':''}">☑ 批量选择</button>
         <label style="font-size:12px; color:var(--muted);">按人员筛选</label>
         <select class="select" style="width:160px;" onchange="State.taskFilterPerson=this.value; renderTasks()">
           <option value="全部" ${(State.taskFilterPerson||'全部')==='全部'?'selected':''}>全部成员</option>
@@ -2574,7 +2581,7 @@ function renderTasks(){
       </div>
       <div class="card-desc">每项任务可一键调配至其他成员</div>
       <table class="tbl" style="margin-top:14px;">
-        <thead><tr><th>任务</th><th>类型</th><th>负责人</th><th class="center">优先级</th><th class="center">状态</th><th class="center">工时</th><th class="center">操作</th></tr></thead>
+        <thead><tr>${State.batchMod==='tasks'?`<th><input type="checkbox" id="batchAllCheck" class="batch-check" data-total="${tasks.length}" onchange="batchSelectAll(tasks.map(t=>t.id),this.checked)"></th>`:''}<th>任务</th><th>类型</th><th>负责人</th><th class="center">优先级</th><th class="center">状态</th><th class="center">工时</th><th class="center">操作</th></tr></thead>
         <tbody>
           ${(() => {
             const fp = State.taskFilterPerson || '全部';
@@ -2582,7 +2589,8 @@ function renderTasks(){
               .sort((a,b)=>{const po={'P0':0,'P1':1,'P2':2,'P3':3};return (po[a.priority]||9)-(po[b.priority]||9);});
             if(!list.length) return '<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:18px;">该筛选下暂无任务</td></tr>';
             return list.map(t => `
-              <tr>
+              <tr ${State.batchMod==='tasks'&&State.batchSel.has(t.id)?'style="background:rgba(91,168,214,0.08);"':''}>
+                ${State.batchMod==='tasks'?`<td><input type="checkbox" class="batch-check" data-id="${t.id}" ${State.batchSel.has(t.id)?'checked':''} onchange="batchCheck('${t.id}',this.checked)"></td>`:''}
                 <td><strong>${t.title}</strong>${t.project?'<br><span style="font-size:10px;color:var(--muted);">'+t.project+'</span>':''}</td>
                 <td style="font-size:12px;">${t.type}</td>
                 <td>${t.assignee||'<span style="color:var(--muted);">未分配</span>'}</td>
@@ -3431,6 +3439,7 @@ function talentManageHTML(){
       <button class="btn" onclick="openNewEmp()">+ 新增员工</button>
       <button class="btn ghost" onclick="importTalentCsv()">📤 CSV导入</button>
       <button class="btn ghost" onclick="downloadTalentTemplate()">📥 CSV模板</button>
+      <button class="btn ghost" onclick="batchToggle('employees',render)" style="${State.batchMod==='employees'?'background:var(--frog-blue);color:#fff;':''}">☑ 批量选择</button>
       <div class="file-actions">
         <button class="btn ghost" onclick="exportData()">导出 JSON</button>
         <label class="btn ghost" for="importFile">导入 JSON</label>
@@ -3440,10 +3449,13 @@ function talentManageHTML(){
       <button class="btn ghost" onclick="resetData()" style="color:var(--risk);border-color:#fee2e2;">重置示例数据</button>
     </div>
     <div class="card elevated">
-      <table class="tbl"><thead><tr><th>ID</th><th>姓名</th><th>岗位</th><th>小组</th><th>状态</th><th class="center">在岗</th><th class="center">个人</th><th class="center">岗位</th><th class="center">综合</th><th>操作</th></tr></thead><tbody>
+      <table class="tbl"><thead><tr>${State.batchMod==='employees'?`<th><input type="checkbox" id="batchAllCheck" class="batch-check" data-total="${all.length}" onchange="batchSelectAll(all.map(e=>e.id),this.checked)"></th>`:''}
+        <th>ID</th><th>姓名</th><th>岗位</th><th>小组</th><th>状态</th><th class="center">在岗</th><th class="center">个人</th><th class="center">岗位</th><th class="center">综合</th><th>操作</th></tr></thead><tbody>
         ${all.map(e => {
           const aP=avgPersonal(e), aQ=avgPosition(e), v=e.status==='空缺';
-          return `<tr><td class="num" style="color:var(--muted);">${e.id}</td><td><strong>${e.name}</strong></td><td>${e.position}</td><td>${e.group}</td><td><span class="pill ${v?'risk':'mint'} dot">${e.status}</span></td><td class="center num">${v?'—':e.yearsInRole+'y'}</td><td class="center num">${v?'—':fmt(aP)}</td><td class="center num">${v?'—':fmt(aQ)}</td><td class="center num"><strong>${v?'—':fmt((aP+aQ)/2)}</strong></td><td><button class="btn ghost sm" onclick="editEmp('${e.id}')">编辑</button> <button class="btn ghost sm" onclick="deleteEmp('${e.id}')" style="color:var(--risk);">删除</button></td></tr>`;
+          return `<tr ${State.batchMod==='employees'&&State.batchSel.has(e.id)?'style="background:rgba(91,168,214,0.08);"':''}>
+            ${State.batchMod==='employees'?`<td><input type="checkbox" class="batch-check" data-id="${e.id}" ${State.batchSel.has(e.id)?'checked':''} onchange="batchCheck('${e.id}',this.checked)"></td>`:''}
+            <td class="num" style="color:var(--muted);">${e.id}</td><td><strong>${e.name}</strong></td><td>${e.position}</td><td>${e.group}</td><td><span class="pill ${v?'risk':'mint'} dot">${e.status}</span></td><td class="center num">${v?'—':e.yearsInRole+'y'}</td><td class="center num">${v?'—':fmt(aP)}</td><td class="center num">${v?'—':fmt(aQ)}</td><td class="center num"><strong>${v?'—':fmt((aP+aQ)/2)}</strong></td><td><button class="btn ghost sm" onclick="editEmp('${e.id}')">编辑</button> <button class="btn ghost sm" onclick="deleteEmp('${e.id}')" style="color:var(--risk);">删除</button></td></tr>`;
         }).join('')}
       </tbody></table>
     </div>
@@ -3569,10 +3581,14 @@ function renderDataManage(){
       <div class="card-desc">下载标准CSV模板，填写后通过下方CSV导入功能批量录入</div>
       <div style="display:flex; gap:12px; margin-top:14px; flex-wrap:wrap;">
         <button class="btn ghost sm" onclick="downloadCSVTemplate('employees')">📥 员工数据模板</button>
+        <button class="btn ghost sm" onclick="downloadCSVTemplate('employees-talent')">📥 人才评估模板</button>
         <button class="btn ghost sm" onclick="downloadCSVTemplate('tasks')">📥 任务数据模板</button>
         <button class="btn ghost sm" onclick="downloadCSVTemplate('social-media')">📥 自媒体数据模板</button>
         <button class="btn ghost sm" onclick="downloadCSVTemplate('expenses')">📥 费用数据模板</button>
         <button class="btn ghost sm" onclick="downloadCSVTemplate('kol')">📥 达人数据模板</button>
+        <button class="btn ghost sm" onclick="downloadCSVTemplate('campaigns')">📥 Campaign模板</button>
+        <button class="btn ghost sm" onclick="downloadCSVTemplate('events')">📥 活动数据模板</button>
+        <button class="btn ghost sm" onclick="downloadCSVTemplate('kol-collabs')">📥 KOL合作记录模板</button>
       </div>
     </div>
     <div class="card elevated">
@@ -3611,29 +3627,51 @@ function renderDataManage(){
 }
 
 function downloadCSVTemplate(type){
-  let csv = '';
-  if(type === 'employees'){
-    const yr2 = new Date().getFullYear();
-    csv = '# 评估周期: 年度="年度" 季度="Q1/Q2/Q3/Q4" 月度="YYYY-MM"\n';
-    csv += 'ID,姓名,岗位,小组,入职日期,在岗年限,状态,评估年份,评估周期,' + PERSONAL_DIMS.join(',') + ',' + POSITION_DIMS.join(',') + ',备注\n';
-    csv += `E001,示例,品牌经理,/,2022-01-01,3,在岗,${yr2},年度,8,8,7,7,8,8,8,8,8,8,7,7,8,8,示例备注\n`;
-  } else if(type === 'tasks'){
-    csv = 'ID,标题,类型,负责人,优先级,状态,周次,预估工时,项目,工作日\n';
-    csv += 'T001,示例任务,文案/内容创作,刘媛卿,P2,待开始,2026-W23,4,内容日历,周一;周二\n';
-  } else if(type === 'social-media'){
-    csv = '日期,平台,粉丝数,发布数,阅读量,播放量,点赞,评论,转发,互动率\n';
-    csv += '2026-06-01,小红书,910000,16,540000,810000,43200,5400,2700,9.5\n';
-  } else if(type === 'expenses'){
-    csv = '日期,项目名称,费用科目,金额,关联Campaign,供应商,状态,备注\n';
-    csv += '2026-06-01,达人签约费,KOL种草,50000,618大促Campaign,星辰传媒,待审批,\n';
-  } else if(type === 'kol'){
-    csv = '达人名称,平台,粉丝量,领域,联系方式,MCN,图文报价,视频报价,直播报价,互动率,级别\n';
-    csv += '示例达人,小红书,500000,母婴,微信:xxx,,8000,15000,30000,6.5,A\n';
+  let csv='', filename=type+'_template.csv';
+  const yr=new Date().getFullYear();
+  if(type==='employees'){
+    // Format matches confirmCSVImport: ID,姓名,岗位,小组,入职日期,在岗年限,状态,[7个人维度],[7岗位维度],备注
+    csv = `# 员工数据导入模板 — 保留此表头行，按列顺序填写\n`;
+    csv += 'ID,姓名,岗位,小组,入职日期,在岗年限,状态,'+PERSONAL_DIMS.join(',')+','+POSITION_DIMS.join(',')+',备注\n';
+    csv += `E099,张三,品牌文案策划,品牌策略与内容组,2024-03-01,2,在岗,8,7,8,7,8,7,7,8,7,8,7,8,7,8,示例员工\n`;
+  } else if(type==='employees-talent'){
+    // Format matches importTalentCsv: ID,姓名,岗位,小组,状态,在岗年限,评估年份,评估周期,[P_DIMS],[Q_DIMS]
+    csv = `# 人才评估模板(含年份/周期) — 用于人才模块导入\n`;
+    csv += 'ID,姓名,岗位,小组,状态,在岗年限,评估年份,评估周期,'+PERSONAL_DIMS.join(',')+','+POSITION_DIMS.join(',')+'\n';
+    csv += `E099,张三,品牌文案策划,品牌策略与内容组,在岗,2,${yr},Q2,8,7,8,7,8,7,7,8,7,8,7,8,7,8\n`;
+    filename='人才评估模板.csv';
+  } else if(type==='tasks'){
+    csv = `# 任务导入模板 — 工作日用分号分隔\n`;
+    csv += 'ID,标题,类型,负责人,优先级,状态,周次,预估工时,项目,工作日\n';
+    csv += `T099,示例任务,文案/内容创作,刘媛卿,P2,待开始,${yr}-W24,4,内容日历,周一;周三\n`;
+  } else if(type==='social-media'){
+    csv = `# 自媒体数据模板\n`;
+    csv += '日期,平台,粉丝数,发布数,阅读量,播放量,点赞,评论,转发,互动率\n';
+    csv += `${yr}-06-01,小红书,910000,16,540000,810000,43200,5400,2700,9.5\n`;
+  } else if(type==='expenses'){
+    // Matches importBudgetCSV/confirmCSVImport: 日期,项目,类别,Campaign,供应商,金额,状态,备注
+    csv = `# 费用明细导入模板 — 类别须与系统科目一致\n`;
+    csv += '日期,项目,类别,Campaign,供应商,金额,状态,备注\n';
+    csv += `${yr}-06-01,618大促,KOL/达人合作,618大促,洋葱MCN,50000,待付款,头部达人×1\n`;
+  } else if(type==='kol'){
+    csv = `# KOL达人库导入模板\n`;
+    csv += '达人名称,平台,粉丝量,领域,联系方式,MCN,图文报价,视频报价,直播报价,互动率,级别\n';
+    csv += '示例达人,小红书,500000,母婴,微信:example,,8000,15000,30000,6.5,A\n';
+  } else if(type==='campaigns'){
+    csv = `# Campaign导入模板\n`;
+    csv += '名称,状态,负责人,开始日期,结束日期,总预算,关联产品\n';
+    csv += `618大促Campaign,进行中,程园,${yr}-05-25,${yr}-06-20,2000000,全线产品\n`;
+  } else if(type==='events'){
+    csv = `# 活动/展会导入模板 — 清单项用分号分隔\n`;
+    csv += 'ID,活动名称,活动类型,负责人,开始日期,结束日期,地点,预算,已支出,状态,清单项\n';
+    csv += `EV099,618线下快闪,快闪,,${yr}-06-15,${yr}-06-16,上海新天地,200000,0,筹备中,场地确认;物料准备;人员到位\n`;
+  } else if(type==='kol-collabs'){
+    csv = `# KOL合作记录导入模板\n`;
+    csv += '达人名,达人类型,合作形式,渠道,供应商,年份,月份,内容采购费,投流费,曝光,阅读,站内互动,站外互动,转化GMV,发布时间,发布链接,是否爆文,备注\n';
+    csv += `示例达人,头部KOL,图文,小红书,洋葱MCN,${yr},6,20000,5000,500000,200000,15000,3000,80000,${yr}-06-15,,否,618合作\n`;
   }
-  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = type+'_template.csv';
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
@@ -3706,9 +3744,11 @@ function confirmCSVImport(type){
   } else if(type === 'expenses'){
     if(!State.data.budgetData) State.data.budgetData = seedBudget();
     rows.forEach(c => {
-      if(c.length < 4) return;
-      const ex = { id:'EX'+Date.now()+count, date:c[0], project:c[1], category:c[2]||'其他', amount:+c[3]||0, campaign:c[4]||'', vendor:c[5]||'', status:c[6]||'待审批', notes:c[7]||'' };
-      if(ex.project){ State.data.budgetData.expenses.push(ex); count++; }
+      if(c.length < 6) return;
+      // New format: 日期,项目,类别,Campaign,供应商,金额,状态,备注
+      const amount=+c[5]||0;
+      const ex = { id:'EX'+Date.now()+count, date:c[0], project:c[1], category:c[2]||'其他', campaign:c[3]||'', vendor:c[4]||'', amount, status:c[6]||'待付款', notes:c[7]||'' };
+      if(ex.project){ State.data.budgetData.expenses.push(ex); const cat=State.data.budgetData.categories.find(x=>x.name===ex.category); if(cat) cat.used+=amount; count++; }
     });
   } else if(type === 'kol'){
     if(!State.data.kolData) State.data.kolData = seedKolData();
@@ -3760,7 +3800,24 @@ function csvImportFlow(config){
     const processRows = (allRows, sheetStats) => {
       try{
         if(allRows.length < 2){ alert('文件为空或仅有表头，请检查内容'); return; }
-        const headers = allRows[0].map(h => String(h||'').trim());
+        let headers = allRows[0].map(h => String(h||'').trim());
+        // Smart header-based column reordering: if config.colNames provided, try to auto-map
+        if(config.colNames && config.colNames.length){
+          const targetCols = config.colNames;
+          const mapping = targetCols.map(name => {
+            // Try exact match, then partial match (case-insensitive)
+            let idx = headers.findIndex(h => h === name);
+            if(idx < 0) idx = headers.findIndex(h => h.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(h.toLowerCase()));
+            return idx;
+          });
+          if(mapping.filter(i=>i>=0).length >= Math.ceil(targetCols.length * 0.6)){
+            // Enough columns matched — remap data rows
+            allRows = [targetCols].concat(allRows.slice(1).map(row =>
+              mapping.map(idx => idx>=0 ? (row[idx]===null||row[idx]===undefined?'':row[idx]) : '')
+            ));
+            headers = targetCols;
+          }
+        }
         const expectedCols = config.expectedCols || null;
         const rows = []; const parseErrors = [];
         allRows.slice(1).forEach((c,i) => {
@@ -4979,7 +5036,8 @@ function renderBudget(){
 
     const exRows = exps.map(e => {
       const stPill = e.status==='已结算' ? 'green' : e.status==='进行中' ? 'blue' : 'yellow';
-      return `<tr>
+      return `<tr ${State.batchMod==='expenses'&&State.batchSel.has(e.id)?'style="background:rgba(91,168,214,0.08);"':''}>
+        ${State.batchMod==='expenses'?`<td><input type="checkbox" class="batch-check" data-id="${e.id}" ${State.batchSel.has(e.id)?'checked':''} onchange="batchCheck('${e.id}',this.checked)"></td>`:''}
         <td>${e.date}</td><td>${e.project}</td><td>${e.category}</td><td>${e.campaign||''}</td><td>${e.vendor||''}</td>
         <td style="text-align:right;font-weight:600;">${fmt(e.amount)}</td>
         <td><span class="pill ${stPill}">${e.status}</span></td>
@@ -5000,14 +5058,16 @@ function renderBudget(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <div class="card-title">费用明细清单</div>
         <div style="display:flex;gap:8px;">
+          <button class="btn ghost" onclick="batchToggle('expenses',()=>{State.budgetTab='details';renderBudget();})" style="${State.batchMod==='expenses'?'background:var(--frog-blue);color:#fff;':''}">☑ 批量选择</button>
           <button class="btn ghost" onclick="importBudgetCSV()">📤 导入 Excel/CSV</button>
           <button class="btn" onclick="addExpense()">+ 新增费用</button>
         </div>
       </div>
       <div style="overflow-x:auto;">
         <table class="tbl" style="width:100%;min-width:820px;">
-          <thead><tr><th>日期</th><th>项目</th><th>类别</th><th>Campaign</th><th>供应商</th><th style="text-align:right;">金额</th><th>状态</th><th>操作</th></tr></thead>
-          <tbody>${exRows||'<tr><td colspan="8" style="color:var(--muted);text-align:center;">暂无费用记录</td></tr>'}</tbody>
+          <thead><tr>${State.batchMod==='expenses'?`<th><input type="checkbox" id="batchAllCheck" class="batch-check" data-total="${exps.length}" onchange="batchSelectAll(exps.map(e=>e.id),this.checked)"></th>`:''}
+          <th>日期</th><th>项目</th><th>类别</th><th>Campaign</th><th>供应商</th><th style="text-align:right;">金额</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody>${exRows||`<tr><td colspan="${State.batchMod==='expenses'?9:8}" style="color:var(--muted);text-align:center;">暂无费用记录</td></tr>`}</tbody>
         </table>
       </div>
     </div>`;
@@ -5225,6 +5285,7 @@ function deleteExpense(id){
 function importBudgetCSV(){
   csvImportFlow({
     title:'导入费用明细', sub:'日期,项目,类别,Campaign,供应商,金额,状态,备注',
+    colNames:['日期','项目','类别','Campaign','供应商','金额','状态','备注'],
     rowToObj: c => {
       if(!c[0]||!c[5]) return null;
       const amount = Number(c[5])||0;
@@ -6102,6 +6163,7 @@ function renderCampaigns(){
       <div style="font-size:11px;color:var(--muted);align-self:flex-end;padding-bottom:10px;margin-right:4px;letter-spacing:.5px;">状态筛选</div>
       ${Object.keys(tabMap).map(t=>`<div class="sub-tab ${tab===t?'active':''}" style="font-size:12px;" onclick="State.campaignTab='${t}';renderCampaigns()">${t} (${State.data.campaigns.filter(c=>c.status===t).length})</div>`).join('')}
       <div style="flex:1"></div>
+      <button class="btn ghost sm" style="margin-bottom:8px;" onclick="batchToggle('campaigns',()=>{State.campaignDetailId=null;renderCampaigns();})" style="${State.batchMod==='campaigns'?'background:var(--frog-blue);color:#fff;':''}">☑ 批量</button>
       <button class="btn ghost sm" style="margin-bottom:8px;" onclick="importCampaignsCsv()">📤 导入CSV</button>
       <button class="btn sm" style="margin-bottom:8px;" onclick="addCampaign()">+ 新建Campaign</button>
     </div>
@@ -6110,8 +6172,9 @@ function renderCampaigns(){
       const progress = c.totalBudget ? Math.round((c.usedBudget/c.totalBudget)*100) : 0;
       const gmv = (c.overall&&c.overall.gmv) ? c.overall.gmv : (c.dailyData||[]).reduce((s,d)=>s+(d.gmv||0),0);
       const roi = c.usedBudget ? (gmv/c.usedBudget).toFixed(2) : '0';
-      return `<div class="card" style="cursor:pointer;" onclick="State.campaignDetailId='${c.id}';renderCampaigns()">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      return `<div class="card" style="cursor:pointer;position:relative;" onclick="${State.batchMod==='campaigns'?'':` State.campaignDetailId='${c.id}';renderCampaigns()`}">
+        ${State.batchMod==='campaigns'?`<input type="checkbox" class="batch-check" data-id="${c.id}" ${State.batchSel.has(c.id)?'checked':''} onclick="event.stopPropagation()" onchange="batchCheck('${c.id}',this.checked)" style="position:absolute;top:12px;left:12px;z-index:2;width:18px;height:18px;">`:''}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;${State.batchMod==='campaigns'?'padding-left:28px;':''}">
           <div style="font-size:15px;font-weight:700;flex:1;">${c.name}</div>
           <span class="pill ${c.status==='进行中'?'green':c.status==='筹备中'?'yellow':'muted'}">${c.status}</span>
         </div>
@@ -6326,6 +6389,7 @@ function importCampaignsCsv(){
   if(!State.data.campaigns) State.data.campaigns = seedCampaigns();
   csvImportFlow({
     title:'批量导入Campaign', sub:'名称,状态,负责人,开始,结束,总预算,产品',
+    colNames:['名称','状态','负责人','开始日期','结束日期','总预算','关联产品'],
     rowToObj:(c,i)=> c[0] ? { id:'CP'+Date.now()+i, name:c[0], status:c[1]||'筹备中', lead:c[2]||'', startDate:c[3]||'', endDate:c[4]||'', totalBudget:+c[5]||0, usedBudget:0, product:c[6]||'', channels:[], milestones:[], overall:{exposure:0,interaction:0,uv:0,gmv:0,conversion:0,notes:''}, searchData:[], creatives:[] } : null,
     onImport:(items)=>{ items.forEach(x=>State.data.campaigns.push(x)); },
     after:renderCampaigns
@@ -6432,15 +6496,17 @@ function renderEvents(){
     ${header('线下活动/展会','EVENTS & EXPO','07 · 模块','线下活动全周期执行管理')}
     <div style="display:flex;margin-bottom:20px;gap:8px;"><div style="flex:1"></div>
       <button class="btn ghost sm" onclick="downloadEventTemplate()">📥 模板</button>
-      <button class="btn ghost sm" onclick="importEventsCsv()">📤 导入CSV</button>
-      <button class="btn sm" onclick="addEvent()">+ 新建活动</button></div>
+        <button class="btn ghost sm" onclick="batchToggle('events',()=>{State.eventDetailId=null;renderEvents();})" style="${State.batchMod==='events'?'background:var(--frog-blue);color:#fff;':''}">☑ 批量</button>
+        <button class="btn ghost sm" onclick="importEventsCsv()">📤 导入CSV</button>
+        <button class="btn sm" onclick="addEvent()">+ 新建活动</button></div>
     <div class="grid grid-2">
     ${list.map(e => {
       const done = e.checklist.filter(c=>c.done).length;
       const rate = e.checklist.length ? Math.round(done/e.checklist.length*100) : 0;
-      return `<div class="card" style="cursor:pointer;" onclick="State.eventDetailId='${e.id}';renderEvents()">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <div style="font-size:15px;font-weight:700;flex:1;">${e.name}</div>
+      return `<div class="card" style="cursor:pointer;position:relative;" onclick="${State.batchMod==='events'?'':` State.eventDetailId='${e.id}';renderEvents()`}">
+        ${State.batchMod==='events'?`<input type="checkbox" class="batch-check" data-id="${e.id}" ${State.batchSel.has(e.id)?'checked':''} onclick="event.stopPropagation()" onchange="batchCheck('${e.id}',this.checked)" style="position:absolute;top:12px;left:12px;z-index:2;width:18px;height:18px;">`:''}
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;${State.batchMod==='events'?'padding-left:28px;':''}">
+          <div style="font-size:14px;font-weight:700;flex:1;">${e.name}</div>
           <span class="pill ${e.status==='已完成'?'green':e.status==='进行中'?'blue':e.status==='已取消'?'red':'yellow'}">${e.status}</span>
         </div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">📅 ${e.date}${e.endDate&&e.endDate!==e.date?' ~ '+e.endDate:''}</div>
@@ -7040,11 +7106,14 @@ function kolLibraryContentHTML(){
         <option ${levelFilter==='全部'?'selected':''}>全部</option><option ${levelFilter==='S'?'selected':''}>S</option><option ${levelFilter==='A'?'selected':''}>A</option><option ${levelFilter==='B'?'selected':''}>B</option>
       </select>
       <div style="flex:1"></div>
+      <button class="btn ghost sm" onclick="batchToggle('kols',renderKolHost)" style="${State.batchMod==='kols'?'background:var(--frog-blue);color:#fff;':''}">☑ 批量</button>
       <button class="btn ghost sm" onclick="importKolsCsv()">📤 导入CSV</button>
       <button class="btn sm" onclick="addKol()">+ 添加达人</button>
     </div>
-    <div class="card"><table class="tbl"><thead><tr><th>达人</th><th>平台</th><th>粉丝</th><th>领域</th><th>互动率</th><th>报价(图文/视频)</th><th>级别</th><th>评分</th><th>操作</th></tr></thead><tbody>
-    ${kols.map(k=>`<tr ${k.blacklisted?'style="opacity:.5;"':''}>
+    <div class="card"><table class="tbl"><thead><tr>${State.batchMod==='kols'?`<th><input type="checkbox" id="batchAllCheck" class="batch-check" data-total="${kols.length}" onchange="batchSelectAll(kols.map(k=>k.id),this.checked)"></th>`:''}
+    <th>达人</th><th>平台</th><th>粉丝</th><th>领域</th><th>互动率</th><th>报价(图文/视频)</th><th>级别</th><th>评分</th><th>操作</th></tr></thead><tbody>
+    ${kols.map(k=>`<tr ${k.blacklisted?'style="opacity:.5;"':''} ${State.batchMod==='kols'&&State.batchSel.has(k.id)?'style="background:rgba(91,168,214,0.08);"':''}>
+      ${State.batchMod==='kols'?`<td><input type="checkbox" class="batch-check" data-id="${k.id}" ${State.batchSel.has(k.id)?'checked':''} onchange="batchCheck('${k.id}',this.checked)"></td>`:''}
       <td>${k.name}${k.quality?' <span class="pill green">⭐优质</span>':''}${k.blacklisted?' <span class="pill red">黑名单</span>':''}</td><td>${k.platform}</td><td>${(k.followers/10000).toFixed(1)}万</td>
       <td>${k.field}</td><td>${k.engagementRate}%</td><td>¥${(k.pricePhoto/1000)}k/¥${(k.priceVideo/1000)}k</td>
       <td><span class="pill ${k.level==='S'?'red':k.level==='A'?'yellow':'muted'}">${k.level}</span></td>
@@ -7490,6 +7559,7 @@ function importKolsCsv(){
   if(!State.data.kolData) State.data.kolData = seedKolData();
   csvImportFlow({
     title:'导入达人资源', sub:'达人名,平台,粉丝量,领域,联系方式,MCN,图文报价,视频报价,直播报价,互动率,级别',
+    colNames:['达人名称','平台','粉丝量','领域','联系方式','MCN','图文报价','视频报价','直播报价','互动率','级别'],
     rowToObj:(c,i)=> c[0] ? {id:'K'+Date.now()+i, name:c[0], platform:c[1]||'小红书', followers:+c[2]||0, field:c[3]||'', contact:c[4]||'', mcn:c[5]||'', pricePhoto:+c[6]||0, priceVideo:+c[7]||0, priceLive:+c[8]||0, engagementRate:+c[9]||0, level:c[10]||'B', score:0, quality:false, blacklisted:false, blacklistReason:''} : null,
     onImport:(items)=>{ items.forEach(x=>State.data.kolData.kols.push(x)); },
     after:renderKolHost
@@ -9173,7 +9243,75 @@ async function init(){
   }
 }
 
+/* ===== 批量删除全局基础设施 ===== */
+State.batchMod = null;
+State.batchSel = new Set();
+State._batchRenderFn = null;
+
+function batchToggle(mod, renderFn){
+  if(State.batchMod === mod){ cancelBatchMode(); return; }
+  State.batchMod = mod; State.batchSel = new Set();
+  State._batchRenderFn = renderFn;
+  renderFn();
+}
+function batchCheck(id, checked){
+  if(checked) State.batchSel.add(id); else State.batchSel.delete(id);
+  _batchBarUpdate();
+}
+function batchSelectAll(ids, allChecked){
+  if(allChecked) ids.forEach(id=>State.batchSel.add(id)); else State.batchSel.clear();
+  _batchBarUpdate();
+  document.querySelectorAll('input.batch-check').forEach(cb=>{ cb.checked=State.batchSel.has(cb.dataset.id); });
+}
+function _batchBarUpdate(){
+  const bar=document.getElementById('globalBatchBar'), cnt=document.getElementById('batchCount');
+  const n=State.batchSel.size;
+  if(!bar) return;
+  if(n===0){ bar.classList.add('hidden'); } else { bar.classList.remove('hidden'); if(cnt) cnt.textContent='已选 '+n+' 项'; }
+  const allCb=document.getElementById('batchAllCheck');
+  if(allCb) allCb.indeterminate=(n>0 && n < (allCb.dataset.total||0));
+}
+function batchExecuteDelete(){
+  const sel=State.batchSel, mod=State.batchMod;
+  if(!sel.size) return;
+  if(!confirm('确认删除选中的 '+sel.size+' 条记录？此操作不可撤销')) return;
+  if(mod==='tasks') State.data.tasks=State.data.tasks.filter(x=>!sel.has(x.id));
+  else if(mod==='employees') State.data.employees=State.data.employees.filter(x=>!sel.has(x.id));
+  else if(mod==='expenses'){
+    State.data.budgetData.expenses.filter(x=>sel.has(x.id)).forEach(e=>{ const cat=State.data.budgetData.categories.find(c=>c.name===e.category); if(cat) cat.used=Math.max(0,cat.used-e.amount); });
+    State.data.budgetData.expenses=State.data.budgetData.expenses.filter(x=>!sel.has(x.id));
+  }
+  else if(mod==='campaigns') State.data.campaigns=State.data.campaigns.filter(x=>!sel.has(x.id));
+  else if(mod==='events') State.data.events=State.data.events.filter(x=>!sel.has(x.id));
+  else if(mod==='spread') State.data.spreadCampaigns=State.data.spreadCampaigns.filter(x=>!sel.has(x.id));
+  else if(mod==='kols') State.data.kolData.kols=State.data.kolData.kols.filter(x=>!sel.has(x.id));
+  else if(mod==='calItems') State.data.calendarItems=State.data.calendarItems.filter(x=>!sel.has(x.id));
+  Storage.save(State.data);
+  State.batchMod=null; State.batchSel=new Set(); State._batchRenderFn=null;
+  _batchBarUpdate();
+  // re-render
+  if(mod==='tasks') renderTasks();
+  else if(mod==='employees'){ render(); }
+  else if(mod==='expenses'){ State.budgetTab='details'; renderBudget(); }
+  else if(mod==='campaigns') renderCampaigns();
+  else if(mod==='events') renderEvents();
+  else if(mod==='spread') renderSpread();
+  else if(mod==='kols') renderKolHost();
+  else if(mod==='calItems') renderCalendar();
+}
+function cancelBatchMode(){
+  const mod=State.batchMod, fn=State._batchRenderFn;
+  State.batchMod=null; State.batchSel=new Set(); State._batchRenderFn=null;
+  _batchBarUpdate();
+  if(fn) fn();
+}
+
 window.addEventListener('DOMContentLoaded', init);
 </script>
+<div id="globalBatchBar" class="batch-bar hidden">
+  <span id="batchCount">已选 0 项</span>
+  <button class="batch-del" onclick="batchExecuteDelete()">🗑 删除选中</button>
+  <button class="batch-cancel" onclick="cancelBatchMode()">✕ 取消</button>
+</div>
 </body>
 </html>
