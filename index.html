@@ -9253,23 +9253,44 @@ function batchToggle(mod, renderFn){
   State.batchMod = mod; State.batchSel = new Set();
   State._batchRenderFn = renderFn;
   renderFn();
+  _batchBarUpdate();
 }
 function batchCheck(id, checked){
   if(checked) State.batchSel.add(id); else State.batchSel.delete(id);
+  const cb=document.querySelector(`input.batch-check[data-id="${id}"]`);
+  if(cb){ const tr=cb.closest('tr'); if(tr) tr.style.background=checked?'rgba(91,168,214,0.08)':''; }
   _batchBarUpdate();
 }
 function batchSelectAll(ids, allChecked){
   if(allChecked) ids.forEach(id=>State.batchSel.add(id)); else State.batchSel.clear();
   _batchBarUpdate();
-  document.querySelectorAll('input.batch-check').forEach(cb=>{ cb.checked=State.batchSel.has(cb.dataset.id); });
+  document.querySelectorAll('input.batch-check').forEach(cb=>{ if(cb.dataset.id) cb.checked=State.batchSel.has(cb.dataset.id); });
+}
+/* 底部浮动栏：对当前模块所有可见项全选/全不选（适用表格与卡片所有模块） */
+function batchAllVisibleIds(){
+  return [...document.querySelectorAll('input.batch-check[data-id]')].map(cb=>cb.dataset.id);
+}
+function batchToggleAll(){
+  const ids = batchAllVisibleIds();
+  const allSelected = ids.length>0 && ids.every(id=>State.batchSel.has(id));
+  if(allSelected){ ids.forEach(id=>State.batchSel.delete(id)); }
+  else { ids.forEach(id=>State.batchSel.add(id)); }
+  document.querySelectorAll('input.batch-check[data-id]').forEach(cb=>{ cb.checked=State.batchSel.has(cb.dataset.id); });
+  // 同步各行高亮
+  document.querySelectorAll('input.batch-check[data-id]').forEach(cb=>{ const tr=cb.closest('tr'); if(tr) tr.style.background=State.batchSel.has(cb.dataset.id)?'rgba(91,168,214,0.08)':''; });
+  _batchBarUpdate();
 }
 function _batchBarUpdate(){
   const bar=document.getElementById('globalBatchBar'), cnt=document.getElementById('batchCount');
   const n=State.batchSel.size;
   if(!bar) return;
-  if(n===0){ bar.classList.add('hidden'); } else { bar.classList.remove('hidden'); if(cnt) cnt.textContent='已选 '+n+' 项'; }
+  const total = batchAllVisibleIds().length;
+  if(!State.batchMod){ bar.classList.add('hidden'); }
+  else { bar.classList.remove('hidden'); if(cnt) cnt.textContent='已选 '+n+' / '+total+' 项'; }
+  const btn=document.getElementById('batchToggleAllBtn');
+  if(btn) btn.textContent = (total>0 && n>=total) ? '☐ 全不选' : '☑ 全选';
   const allCb=document.getElementById('batchAllCheck');
-  if(allCb) allCb.indeterminate=(n>0 && n < (allCb.dataset.total||0));
+  if(allCb){ allCb.checked=(total>0&&n>=total); allCb.indeterminate=(n>0 && n<total); }
 }
 function batchExecuteDelete(){
   const sel=State.batchSel, mod=State.batchMod;
@@ -9310,6 +9331,7 @@ window.addEventListener('DOMContentLoaded', init);
 </script>
 <div id="globalBatchBar" class="batch-bar hidden">
   <span id="batchCount">已选 0 项</span>
+  <button class="batch-cancel" id="batchToggleAllBtn" onclick="batchToggleAll()">☑ 全选</button>
   <button class="batch-del" onclick="batchExecuteDelete()">🗑 删除选中</button>
   <button class="batch-cancel" onclick="cancelBatchMode()">✕ 取消</button>
 </div>
