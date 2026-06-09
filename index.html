@@ -6757,19 +6757,24 @@ function renderKolProjectDetail(id){
     <div style="margin-bottom:16px;"><button class="btn ghost sm" onclick="State.kolProjectId=null;renderKolSeeding()">← 返回项目</button></div>
     ${header(p.name,'PROJECT DETAIL','09 · 种草项目',p.product+' · '+p.lead)}
     <div style="display:flex;margin-bottom:12px;gap:8px;"><div style="flex:1;font-size:13px;color:var(--muted);">目标: ${p.target} · 预算 ${(p.usedBudget/10000).toFixed(1)}/${(p.budget/10000).toFixed(0)}万</div>
+      <button class="btn ghost sm" onclick="editKolProjectKPI('${p.id}')">🎯 KPI目标</button>
       <button class="btn ghost sm" onclick="importCollabCsv('${p.id}')">📤 导入CSV</button>
       <button class="btn sm" onclick="addCollaboration('${p.id}')">+ 录入达人数据</button></div>
-    <div class="card" style="overflow-x:auto;"><table class="tbl"><thead><tr><th>达人</th><th>形式</th><th>费用</th><th>曝光</th><th>互动</th><th>转化(GMV)</th><th>CPE</th><th>ROI</th><th>发布时间</th><th>链接</th><th>爆款</th><th>状态</th><th class="center">操作</th></tr></thead><tbody>
+    ${kolProjectKPICardHTML(p)}
+    <div class="card" style="overflow-x:auto;"><table class="tbl"><thead><tr><th>达人</th><th>类型</th><th>渠道</th><th>费用(内容/投流)</th><th>曝光</th><th>互动(站内/站外)</th><th>转化GMV</th><th>CPM</th><th>CPE</th><th>ROI</th><th>月份</th><th>爆文</th><th>状态</th><th class="center">操作</th></tr></thead><tbody>
     ${p.collaborations.map((c,idx)=>`<tr>
-      <td>${c.kolName}</td><td>${c.type}</td><td>¥${c.fee.toLocaleString()}</td>
-      <td>${(c.exposure/10000).toFixed(0)}万</td><td>${(c.interaction/10000).toFixed(1)}万</td>
-      <td>${c.conversion?'¥'+c.conversion.toLocaleString():'-'}</td><td>${c.cpe?'¥'+c.cpe:'-'}</td><td>${c.roi||'-'}</td>
-      <td>${c.publishDate||'-'}</td>
-      <td>${c.publishLink?`<a href="${c.publishLink}" target="_blank" style="color:var(--frog-blue);">查看↗</a>`:'-'}</td>
+      <td>${c.kolName}${c.publishLink?` <a href="${c.publishLink}" target="_blank" style="color:var(--frog-blue);">↗</a>`:''}</td>
+      <td><span class="tag">${c.talentType||c.type||'-'}</span></td><td>${c.channel||'-'}</td>
+      <td>¥${(c.fee||0).toLocaleString()}<br><span style="font-size:10px;color:var(--muted);">${((c.feeContent||0)/10000).toFixed(1)}万/${((c.feeAd||0)/10000).toFixed(1)}万</span></td>
+      <td>${((c.exposure||0)/10000).toFixed(0)}万</td>
+      <td>${((c.interaction||0)/10000).toFixed(1)}万${c.extInteraction?'<br><span style="font-size:10px;color:var(--muted);">站外'+c.extInteraction+'</span>':''}</td>
+      <td>${c.conversion?'¥'+c.conversion.toLocaleString():'-'}</td>
+      <td>${c.cpm?'¥'+c.cpm:'-'}</td><td>${c.cpe?'¥'+c.cpe:'-'}</td><td>${c.roi||'-'}</td>
+      <td>${c.year||''}/${c.month||''}</td>
       <td>${c.isHot?'<span class="pill red">🔥</span>':'-'}</td>
       <td><span class="pill ${c.status==='已完成'?'green':'yellow'}">${c.status}</span></td>
       <td class="center"><button class="btn sm ghost" onclick="editCollaboration('${p.id}',${idx})">编辑</button></td>
-    </tr>`).join('') || '<tr><td colspan=13 style="color:var(--muted);">暂无合作数据</td></tr>'}
+    </tr>`).join('') || '<tr><td colspan=14 style="color:var(--muted);">暂无合作数据</td></tr>'}
     </tbody></table></div>`;
   $('#main').innerHTML = '<section class="section active">'+html+'</section>';
   mtInjectTabBar();
@@ -6872,27 +6877,121 @@ function saveKolProject(){
   Storage.save(State.data); closeModal('modalGeneric'); renderKolSeeding();
 }
 
+/* 种草项目 KPI: 曝光/阅读/互动/CPM/CPE/爆文率, 其中 CPM/CPE 越低越好 */
+const KOL_KPI_DEFS = [
+  {key:'exposure', name:'总曝光', unit:'', lowerBetter:false},
+  {key:'reads', name:'总阅读', unit:'', lowerBetter:false},
+  {key:'interaction', name:'总互动', unit:'', lowerBetter:false},
+  {key:'cpm', name:'CPM', unit:'¥', lowerBetter:true},
+  {key:'cpe', name:'CPE', unit:'¥', lowerBetter:true},
+  {key:'hotRate', name:'爆文率', unit:'%', lowerBetter:false}
+];
+function kolProjectActuals(p){
+  const cs = p.collaborations||[];
+  const sum = k => cs.reduce((s,c)=>s+(+c[k]||0),0);
+  const exposure=sum('exposure'), reads=sum('reads'), interaction=sum('interaction'), fee=sum('fee');
+  const hot = cs.filter(c=>c.isHot).length;
+  return {
+    exposure, reads, interaction,
+    cpm: exposure?+(fee/exposure*1000).toFixed(2):0,
+    cpe: interaction?+(fee/interaction).toFixed(2):0,
+    hotRate: cs.length?+(hot/cs.length*100).toFixed(1):0
+  };
+}
+function kolProjectKPICardHTML(p){
+  if(!p.kpiTargets) return '';
+  const act = kolProjectActuals(p);
+  const fmtV = (k,v)=> k==='exposure'||k==='reads'||k==='interaction' ? (v/10000).toFixed(1)+'万' : v;
+  return `<div class="card" style="margin-bottom:16px;"><div style="font-size:13px;font-weight:700;margin-bottom:12px;">🎯 项目KPI达成 <span style="font-size:11px;color:var(--muted);font-weight:400;">(CPM/CPE 越低越好)</span></div>
+    <div class="grid grid-3" style="gap:12px;">
+    ${KOL_KPI_DEFS.map(d=>{
+      const tgt=+p.kpiTargets[d.key]||0, cur=act[d.key];
+      if(!tgt) return `<div><div style="font-size:11px;color:var(--muted);">${d.name}</div><div style="font-size:16px;font-weight:700;">${d.unit}${fmtV(d.key,cur)}</div><div style="font-size:10px;color:var(--muted);">未设目标</div></div>`;
+      const pct = d.lowerBetter ? (cur?Math.min(150,Math.round(tgt/cur*100)):0) : Math.round(cur/tgt*100);
+      const col = pct>=100?'var(--frog-mint)':pct>=70?'var(--frog-yellow)':'var(--risk)';
+      return `<div><div style="font-size:11px;color:var(--muted);">${d.name}</div>
+        <div style="font-size:16px;font-weight:700;">${d.unit}${fmtV(d.key,cur)} <span style="font-size:11px;color:${col};">${pct}%</span></div>
+        <div style="font-size:10px;color:var(--muted);">目标 ${d.unit}${fmtV(d.key,tgt)}</div>
+        <div class="progress-bar" style="margin-top:4px;"><div class="progress-fill" style="width:${Math.min(100,pct)}%;background:${col};"></div></div></div>`;
+    }).join('')}
+    </div></div>`;
+}
+function editKolProjectKPI(pid){
+  const p = State.data.kolData.projects.find(x=>x.id===pid); if(!p) return;
+  const t = p.kpiTargets||{};
+  $('#modalGenericTitle').textContent='编辑项目KPI目标'; $('#modalGenericSub').textContent='PROJECT KPI';
+  $('#modalGenericBody').innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">CPM/CPE 越低越好；曝光/阅读/互动填实际数值，爆文率填百分比</div>`+
+    KOL_KPI_DEFS.map(d=>`<div class="form-group"><label>${d.name} 目标 ${d.unit?'('+d.unit+')':''} ${d.lowerBetter?'· 越低越好':''}</label><input class="input" type="number" id="kt_${d.key}" value="${t[d.key]||''}"></div>`).join('');
+  $('#modalGenericFoot').innerHTML = `<button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button><button class="btn" onclick="saveKolProjectKPI('${pid}')">保存</button>`;
+  openModal('modalGeneric');
+}
+function saveKolProjectKPI(pid){
+  const p = State.data.kolData.projects.find(x=>x.id===pid); if(!p) return;
+  p.kpiTargets = {};
+  KOL_KPI_DEFS.forEach(d=>{ p.kpiTargets[d.key] = +$('#kt_'+d.key).value||0; });
+  Storage.save(State.data); closeModal('modalGeneric'); renderKolSeeding();
+}
+
+const KOL_TALENT_TYPES = ['明星','KOL-头部','KOL-腰部','KOL-尾部','KOC','素人'];
 function collabForm(c){
   const kols = State.data.kolData.kols;
+  const yr = new Date().getFullYear();
   return `
     <div class="form-row">
       <div class="form-group"><label>达人</label><select class="select" id="coKol">${kols.map(k=>`<option value="${k.id}" ${c.kolId===k.id?'selected':''}>${k.name}</option>`).join('')}</select></div>
+      <div class="form-group"><label>达人类型</label><select class="select" id="coTalentType">${KOL_TALENT_TYPES.map(t=>`<option ${c.talentType===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row">
       <div class="form-group"><label>形式</label><select class="select" id="coType">${['图文','视频','直播'].map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      <div class="form-group"><label>关联渠道</label><select class="select" id="coChannel">${['小红书','抖音','微信','微博','B站','视频号','快手'].map(t=>`<option ${c.channel===t?'selected':''}>${t}</option>`).join('')}</select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>费用</label><input class="input" type="number" id="coFee" value="${c.fee||''}"></div>
-      <div class="form-group"><label>曝光</label><input class="input" type="number" id="coExp" value="${c.exposure||''}"></div>
+      <div class="form-group"><label>关联供应商/MCN</label><input class="input" id="coVendor" value="${c.vendor||''}" placeholder="供应商或MCN名称"></div>
+      <div class="form-group"><label>年份</label><input class="input" type="number" id="coYear" value="${c.year||yr}"></div>
+      <div class="form-group"><label>月份</label><select class="select" id="coMonth">${Array.from({length:12},(_,i)=>i+1).map(m=>`<option ${c.month==m?'selected':''}>${m}</option>`).join('')}</select></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin:12px 0 4px;letter-spacing:1px;">费用拆分</div>
+    <div class="form-row">
+      <div class="form-group"><label>内容采购费</label><input class="input" type="number" id="coFeeContent" value="${c.feeContent||''}" oninput="coRecalc()"></div>
+      <div class="form-group"><label>投流费</label><input class="input" type="number" id="coFeeAd" value="${c.feeAd||''}" oninput="coRecalc()"></div>
+      <div class="form-group"><label>总费用(自动)</label><input class="input" type="number" id="coFee" value="${c.fee||''}" readonly style="background:var(--surface-2,#f1f5f9);"></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin:12px 0 4px;letter-spacing:1px;">效果数据</div>
+    <div class="form-row">
+      <div class="form-group"><label>曝光</label><input class="input" type="number" id="coExp" value="${c.exposure||''}" oninput="coRecalc()"></div>
+      <div class="form-group"><label>阅读量</label><input class="input" type="number" id="coReads" value="${c.reads||''}"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>互动</label><input class="input" type="number" id="coInt" value="${c.interaction||''}"></div>
-      <div class="form-group"><label>转化GMV</label><input class="input" type="number" id="coConv" value="${c.conversion||''}"></div>
+      <div class="form-group"><label>站内互动</label><input class="input" type="number" id="coInt" value="${c.interaction||''}" oninput="coRecalc()"></div>
+      <div class="form-group"><label>站外互动次数</label><input class="input" type="number" id="coExtInt" value="${c.extInteraction||''}"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>转化GMV</label><input class="input" type="number" id="coConv" value="${c.conversion||''}" oninput="coRecalc()"></div>
+      <div class="form-group"><label>是否爆文</label><select class="select" id="coIsHotSel"><option value="0" ${!c.isHot?'selected':''}>否</option><option value="1" ${c.isHot?'selected':''}>是 🔥</option></select></div>
+    </div>
+    <div class="form-row" style="background:var(--surface-2,#f8fafc);border-radius:8px;padding:8px 12px;">
+      <div class="form-group"><label>CPM(自动·越低越好)</label><input class="input" id="coCpm" value="${c.cpm||''}" readonly style="background:transparent;border:none;font-weight:700;"></div>
+      <div class="form-group"><label>CPE(自动·越低越好)</label><input class="input" id="coCpe" value="${c.cpe||''}" readonly style="background:transparent;border:none;font-weight:700;"></div>
+      <div class="form-group"><label>ROI(自动)</label><input class="input" id="coRoi" value="${c.roi||''}" readonly style="background:transparent;border:none;font-weight:700;"></div>
     </div>
     <div class="form-row">
       <div class="form-group"><label>发布时间</label><input class="input" type="date" id="coPubDate" value="${c.publishDate||''}"></div>
       <div class="form-group"><label>状态</label><select class="select" id="coStatus">${['进行中','已完成'].map(s=>`<option ${c.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
     </div>
     <div class="form-group"><label>发布链接</label><input class="input" id="coPubLink" value="${c.publishLink||''}" placeholder="https://..."></div>
-    <div class="form-group" style="display:flex;align-items:center;gap:8px;"><input type="checkbox" id="coIsHot" ${c.isHot?'checked':''}><label style="margin:0;">标记为爆款笔记 🔥</label></div>`;
+    <div class="form-group"><label>项目备注</label><input class="input" id="coNotes" value="${c.notes||''}"></div>`;
+}
+
+/* 实时联动计算 总费用 / CPM / CPE / ROI */
+function coRecalc(){
+  const v = id => +($('#'+id)&&$('#'+id).value)||0;
+  const feeContent=v('coFeeContent'), feeAd=v('coFeeAd');
+  const fee = feeContent+feeAd;
+  const exp=v('coExp'), interaction=v('coInt'), conversion=v('coConv');
+  if($('#coFee')) $('#coFee').value = fee||'';
+  if($('#coCpm')) $('#coCpm').value = exp ? (fee/exp*1000).toFixed(2) : '';
+  if($('#coCpe')) $('#coCpe').value = interaction ? (fee/interaction).toFixed(2) : '';
+  if($('#coRoi')) $('#coRoi').value = fee ? (conversion/fee).toFixed(2) : '';
 }
 
 function addCollaboration(projectId){
@@ -6916,13 +7015,20 @@ function saveCollaboration(projectId, idx){
   const p = State.data.kolData.projects.find(x=>x.id===projectId);
   if(!p) return;
   const kol = State.data.kolData.kols.find(k=>k.id===$('#coKol').value);
-  const fee = +$('#coFee').value||0, interaction = +$('#coInt').value||0, conversion = +$('#coConv').value||0;
+  const feeContent = +$('#coFeeContent').value||0, feeAd = +$('#coFeeAd').value||0;
+  const fee = feeContent + feeAd;
+  const interaction = +$('#coInt').value||0, conversion = +$('#coConv').value||0, exposure = +$('#coExp').value||0;
   const rec = {
-    kolId:kol.id, kolName:kol.name, type:$('#coType').value, fee,
-    exposure:+$('#coExp').value||0, interaction, conversion,
+    kolId:kol?kol.id:'', kolName:kol?kol.name:'', talentType:$('#coTalentType').value,
+    type:$('#coType').value, channel:$('#coChannel').value, vendor:$('#coVendor').value.trim(),
+    year:+$('#coYear').value||new Date().getFullYear(), month:+$('#coMonth').value||1,
+    feeContent, feeAd, fee,
+    exposure, reads:+$('#coReads').value||0, interaction, extInteraction:+$('#coExtInt').value||0, conversion,
+    cpm: exposure ? +(fee/exposure*1000).toFixed(2) : 0,
     cpe: interaction ? +(fee/interaction).toFixed(2) : 0,
     roi: fee ? +(conversion/fee).toFixed(2) : 0,
-    publishDate:$('#coPubDate').value, publishLink:$('#coPubLink').value.trim(), isHot:$('#coIsHot').checked,
+    publishDate:$('#coPubDate').value, publishLink:$('#coPubLink').value.trim(),
+    isHot:$('#coIsHotSel').value==='1', notes:$('#coNotes').value.trim(),
     status:$('#coStatus').value
   };
   if(idx!==undefined && idx!==null){
@@ -6946,12 +7052,14 @@ function deleteCollaboration(projectId, idx){
 function importCollabCsv(projectId){
   const p = State.data.kolData.projects.find(x=>x.id===projectId); if(!p) return;
   csvImportFlow({
-    title:'导入合作数据', sub:'达人名,形式,费用,曝光,互动,转化,发布时间,发布链接,是否爆款',
+    title:'导入合作数据', sub:'达人名,达人类型,形式,渠道,供应商,年份,月份,内容采购费,投流费,曝光,阅读,站内互动,站外互动,转化GMV,发布时间,发布链接,是否爆文,备注',
+    expectedCols: 18,
     rowToObj:(col)=>{
       if(!col[0]) return null;
-      const fee=+col[2]||0, interaction=+col[4]||0, conversion=+col[5]||0;
+      const feeContent=+col[7]||0, feeAd=+col[8]||0, fee=feeContent+feeAd;
+      const exposure=+col[9]||0, interaction=+col[11]||0, conversion=+col[13]||0;
       const kol = State.data.kolData.kols.find(k=>k.name===col[0]);
-      return { kolId:kol?kol.id:'', kolName:col[0], type:col[1]||'图文', fee, exposure:+col[3]||0, interaction, conversion, cpe:interaction?+(fee/interaction).toFixed(2):0, roi:fee?+(conversion/fee).toFixed(2):0, publishDate:col[6]||'', publishLink:col[7]||'', isHot:/^(是|1|true|✓)$/i.test((col[8]||'').trim()), status:conversion?'已完成':'进行中' };
+      return { kolId:kol?kol.id:'', kolName:col[0], talentType:col[1]||'KOC', type:col[2]||'图文', channel:col[3]||'小红书', vendor:col[4]||'', year:+col[5]||new Date().getFullYear(), month:+col[6]||1, feeContent, feeAd, fee, exposure, reads:+col[10]||0, interaction, extInteraction:+col[12]||0, conversion, cpm:exposure?+(fee/exposure*1000).toFixed(2):0, cpe:interaction?+(fee/interaction).toFixed(2):0, roi:fee?+(conversion/fee).toFixed(2):0, publishDate:col[14]||'', publishLink:col[15]||'', isHot:/^(是|1|true|✓)$/i.test((col[16]||'').trim()), notes:col[17]||'', status:conversion?'已完成':'进行中' };
     },
     onImport:(items)=>{ items.forEach(c=>{ p.collaborations.push(c); p.usedBudget += c.fee; }); },
     after:renderKolSeeding
