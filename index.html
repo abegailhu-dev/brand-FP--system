@@ -2713,7 +2713,49 @@ function assignFromPool(poolId, assigneeName){
  *  MODULE 16: TALENT MANAGEMENT (migrated from existing system)
  * ============================================================ */
 
+function renderTalentLock(){
+  const html = `
+    ${header('人才管理', 'TALENT OS', '16 · 团队管理', '本模块涉及员工绩效与人事敏感信息，需输入访问密码。')}
+    <div class="card elevated" style="max-width:420px; margin:40px auto; text-align:center; padding:48px 36px;">
+      <div style="font-size:44px; margin-bottom:16px;">🔒</div>
+      <div style="font-size:17px; font-weight:700; margin-bottom:8px;">人才管理已加密</div>
+      <div style="font-size:12px; color:var(--muted); margin-bottom:24px;">请输入访问密码查看人事数据</div>
+      <input class="input" type="password" id="talentPwInput" placeholder="访问密码" style="text-align:center; letter-spacing:4px; margin-bottom:8px;" onkeydown="if(event.key==='Enter')unlockTalent()">
+      <div id="talentPwErr" style="font-size:12px; color:var(--risk); min-height:18px; margin-bottom:12px;"></div>
+      <button class="btn" style="width:100%;" onclick="unlockTalent()">解锁查看</button>
+      <div style="margin-top:18px; font-size:11px; color:var(--muted);">默认密码 888888 · 可在解锁后修改</div>
+    </div>`;
+  $('#main').innerHTML = `<section class="section active">${html}</section>`;
+  setTimeout(()=>{ const el=document.getElementById('talentPwInput'); if(el) el.focus(); }, 60);
+}
+function unlockTalent(){
+  const val = (document.getElementById('talentPwInput')||{}).value || '';
+  if(val === State.data.talentPassword){ State.talentUnlocked = true; renderTalentModule(); }
+  else { const err=document.getElementById('talentPwErr'); if(err) err.textContent='密码错误，请重试'; }
+}
+function changeTalentPassword(){
+  $('#modalGenericTitle').textContent = '修改人才管理访问密码';
+  $('#modalGenericSub').textContent = 'TALENT PASSWORD';
+  $('#modalGenericBody').innerHTML = `
+    <div class="form-group"><label>当前密码</label><input class="input" type="password" id="tpwOld"></div>
+    <div class="form-group"><label>新密码</label><input class="input" type="password" id="tpwNew"></div>
+    <div class="form-group"><label>确认新密码</label><input class="input" type="password" id="tpwNew2"></div>`;
+  $('#modalGenericFoot').innerHTML = `<button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button><button class="btn" onclick="saveTalentPassword()">保存</button>`;
+  openModal('modalGeneric');
+}
+function saveTalentPassword(){
+  if($('#tpwOld').value !== State.data.talentPassword){ alert('当前密码错误'); return; }
+  const n1=$('#tpwNew').value, n2=$('#tpwNew2').value;
+  if(!n1){ alert('新密码不能为空'); return; }
+  if(n1!==n2){ alert('两次输入的新密码不一致'); return; }
+  State.data.talentPassword = n1;
+  Storage.save(State.data); closeModal('modalGeneric'); alert('密码修改成功');
+}
+function lockTalent(){ State.talentUnlocked = false; renderTalentModule(); }
+
 function renderTalentModule(){
+  if(State.data.talentPassword === undefined) State.data.talentPassword = '888888';
+  if(!State.talentUnlocked){ return renderTalentLock(); }
   applyTalentConfigOverrides(); // #4/#5 应用可编辑的目标值/级别/量表覆盖
   const subViews = [
     { id:'talent-overview', label:'部门概览' },
@@ -2728,8 +2770,11 @@ function renderTalentModule(){
   let content = `
     ${header('人才管理', 'TALENT OS', '16 · 团队管理',
       '品牌部人才管理。部门概览(含缺口分析)、员工画像(含发展路径)、岗位职级(含评估标准与晋升/淘汰建议)、人才盘点。')}
-    <div class="sub-tabs">
+    <div class="sub-tabs" style="display:flex;align-items:center;">
       ${subViews.map(v => `<div class="sub-tab ${State.talentSubView===v.id?'active':''}" onclick="switchTalentSub('${v.id}')">${v.label}</div>`).join('')}
+      <div style="flex:1"></div>
+      <button class="btn ghost sm" onclick="changeTalentPassword()">🔑 修改密码</button>
+      <button class="btn ghost sm" onclick="lockTalent()">🔒 锁定</button>
     </div>
     <div id="talentSubContent"></div>
   `;
