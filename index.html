@@ -6142,11 +6142,12 @@ function renderEventDetail(id){
     ${header(e.name,'EVENT DETAIL','07 · '+e.status,e.location+' · '+e.date)}
     <div class="grid grid-2">
       <div class="card">
-        <div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:13px;font-weight:700;flex:1;">执行 Checklist (${rate}%)</div><button class="btn ghost sm" onclick="addChecklistItem('${e.id}')">+ 添加</button></div>
-        ${e.checklist.map((c,i)=>`<div class="checklist-item">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;"><div style="font-size:13px;font-weight:700;flex:1;">执行 Checklist (${rate}%)</div><button class="btn ghost sm" onclick="batchAddChecklist('${e.id}')">≡ 批量添加</button><button class="btn ghost sm" onclick="addChecklistItem('${e.id}')">+ 添加</button></div>
+        ${e.checklist.map((c,i)=>`<div class="checklist-item" style="display:flex;align-items:center;gap:8px;">
           <div class="checklist-check ${c.done?'checked':''}" onclick="toggleChecklist('${e.id}',${i})">${c.done?'✓':''}</div>
-          <div class="checklist-text ${c.done?'done':''}">${c.text}</div>
-        </div>`).join('')}
+          <div class="checklist-text ${c.done?'done':''}" style="flex:1;">${c.text}</div>
+          <span style="cursor:pointer;color:var(--muted);font-size:14px;" onclick="deleteChecklistItem('${e.id}',${i})">✕</span>
+        </div>`).join('') || '<div style="color:var(--muted);font-size:12px;">暂无清单项，点击右上角添加</div>'}
       </div>
       <div class="card">
         <div style="font-size:13px;font-weight:700;margin-bottom:12px;">基本信息</div>
@@ -6169,8 +6170,65 @@ function renderEventDetail(id){
         <div><div class="persona-label">改进点</div><div style="font-size:13px;color:var(--ink-3);">${e.review.improvements||'<span style="color:var(--muted)">待填写</span>'}</div></div>
         <div><div class="persona-label">经验沉淀</div><div style="font-size:13px;color:var(--ink-3);">${e.review.lessons||'<span style="color:var(--muted)">待填写</span>'}</div></div>
       </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div style="display:flex;align-items:center;margin-bottom:12px;"><div style="font-size:13px;font-weight:700;flex:1;">现场图片墙 <span style="font-size:11px;color:var(--muted);font-weight:400;">(外链，避免占用存储)</span></div><button class="btn ghost sm" onclick="addEventImage('${e.id}')">+ 添加图片链接</button></div>
+      ${(e.images&&e.images.length)?`<div style="display:flex;flex-wrap:wrap;gap:10px;">
+        ${e.images.map((img,i)=>`<div style="position:relative;width:140px;">
+          <a href="${img.url}" target="_blank"><img src="${img.url}" style="width:140px;height:100px;object-fit:cover;border-radius:8px;border:1px solid var(--line-2);" onerror="this.style.opacity=0.3;this.alt='加载失败';"></a>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${img.caption||'未命名'}</div>
+          <span style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.5);color:#fff;border-radius:50%;width:20px;height:20px;line-height:20px;text-align:center;cursor:pointer;font-size:12px;" onclick="deleteEventImage('${e.id}',${i})">✕</span>
+        </div>`).join('')}
+      </div>`:'<div style="color:var(--muted);font-size:12px;">暂无图片，点击右上角粘贴图片外链（如图床/云存储URL）</div>'}
     </div>`;
   $('#main').innerHTML = '<section class="section active">'+html+'</section>';
+}
+
+function batchAddChecklist(id){
+  $('#modalGenericTitle').textContent='批量添加清单项'; $('#modalGenericSub').textContent='BATCH CHECKLIST';
+  $('#modalGenericBody').innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">每行一项；行首加 ✓ 或 [x] 表示已完成</div>
+    <textarea class="input" id="bcText" style="min-height:160px;font-family:inherit;" placeholder="✓ 场地租赁确认&#10;美陈设计定稿&#10;物料制作&#10;现场人员排班"></textarea>`;
+  $('#modalGenericFoot').innerHTML = `<button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button><button class="btn" onclick="saveBatchChecklist('${id}')">添加</button>`;
+  openModal('modalGeneric');
+}
+function saveBatchChecklist(id){
+  const e = State.data.events.find(x=>x.id===id); if(!e) return;
+  const lines = $('#bcText').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  let added=0;
+  lines.forEach(l=>{
+    const done = /^(✓|\[x\]|\[X\]|√)/.test(l);
+    const text = l.replace(/^(✓|\[x\]|\[X\]|√)\s*/,'').trim();
+    if(text){ e.checklist.push({text, done}); added++; }
+  });
+  Storage.save(State.data); closeModal('modalGeneric'); renderEvents();
+  if(!added) alert('未识别到有效清单项');
+}
+function deleteChecklistItem(id, idx){
+  const e = State.data.events.find(x=>x.id===id); if(!e) return;
+  e.checklist.splice(idx,1);
+  Storage.save(State.data); renderEvents();
+}
+function addEventImage(id){
+  $('#modalGenericTitle').textContent='添加图片链接'; $('#modalGenericSub').textContent='EVENT IMAGE';
+  $('#modalGenericBody').innerHTML = `<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">粘贴图片外链URL（图床/云存储/公开链接），可批量：每行一个URL</div>
+    <textarea class="input" id="eiUrls" style="min-height:100px;" placeholder="https://example.com/photo1.jpg&#10;https://example.com/photo2.jpg"></textarea>
+    <div class="form-group" style="margin-top:8px;"><label>说明(可选，应用于本次全部图片)</label><input class="input" id="eiCaption" placeholder="如：开幕现场"></div>`;
+  $('#modalGenericFoot').innerHTML = `<button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button><button class="btn" onclick="saveEventImage('${id}')">添加</button>`;
+  openModal('modalGeneric');
+}
+function saveEventImage(id){
+  const e = State.data.events.find(x=>x.id===id); if(!e) return;
+  if(!e.images) e.images=[];
+  const caption = $('#eiCaption').value.trim();
+  const urls = $('#eiUrls').value.split(/\r?\n/).map(u=>u.trim()).filter(u=>/^https?:\/\//.test(u));
+  if(!urls.length){ alert('请填写有效的图片URL(需以 http:// 或 https:// 开头)'); return; }
+  urls.forEach(url=>e.images.push({url, caption}));
+  Storage.save(State.data); closeModal('modalGeneric'); renderEvents();
+}
+function deleteEventImage(id, idx){
+  const e = State.data.events.find(x=>x.id===id); if(!e) return;
+  e.images.splice(idx,1);
+  Storage.save(State.data); renderEvents();
 }
 
 function addEvent(){
