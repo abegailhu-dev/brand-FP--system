@@ -1323,8 +1323,8 @@ input[type=file]{display:none;}
         <span class="nav-text">消费者洞察</span>
       </div>
       <div class="nav-item" data-view="vendors">
-        <span class="nav-num">13</span>
-        <span class="nav-text">供应商管理</span>
+        <span class="nav-num">12</span>
+        <span class="nav-text">外部资产管理</span>
       </div>
     </div>
 
@@ -6629,6 +6629,48 @@ function seedKolData(){
   };
 }
 
+/* 达人资源库内容 — 可在「种草推广」或「外部资产管理」中复用 */
+function renderKolHost(){ if(State.view==='vendors') renderVendors(); else renderKolSeeding(); }
+function kolLibraryContentHTML(){
+  const kd = State.data.kolData; if(!kd) return '';
+  const search = State.kolSearch || '';
+  const levelFilter = State.kolLevelFilter || '全部';
+  let kols = kd.kols.filter(k => !search || k.name.includes(search) || k.field.includes(search));
+  if(levelFilter!=='全部') kols = kols.filter(k=>k.level===levelFilter);
+  const recs = identifyQualityKols();
+  const recBlock = recs.length ? `
+    <div class="card" style="margin-bottom:16px;border-left:3px solid var(--frog-mint);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">⭐ 优质达人自动识别 (${recs.length})</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">系统从所有合作数据中识别出表现优异(ROI≥3.0且转化达标)、尚未标记为优质的达人，确认后收录为优质达人</div>
+      <table class="tbl"><thead><tr><th>达人</th><th>平台</th><th>合作次数</th><th>平均ROI</th><th>平均CPE</th><th class="center">操作</th></tr></thead><tbody>
+      ${recs.map(r=>`<tr>
+        <td><strong>${r.kolName}</strong></td><td>${r.platform||'-'}</td><td>${r.count}</td>
+        <td style="color:var(--frog-mint);font-weight:700;">${r.avgRoi.toFixed(2)}</td><td>¥${r.avgCpe.toFixed(2)}</td>
+        <td class="center"><button class="btn sm" onclick="confirmQualityKol('${r.kolId}')">确认收录</button></td>
+      </tr>`).join('')}
+      </tbody></table>
+    </div>` : '';
+  return recBlock + `
+    <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;">
+      <input class="input" style="width:200px;" placeholder="搜索达人/领域" value="${search}" oninput="State.kolSearch=this.value;renderKolHost()">
+      <select class="select" style="width:100px;" onchange="State.kolLevelFilter=this.value;renderKolHost()">
+        <option ${levelFilter==='全部'?'selected':''}>全部</option><option ${levelFilter==='S'?'selected':''}>S</option><option ${levelFilter==='A'?'selected':''}>A</option><option ${levelFilter==='B'?'selected':''}>B</option>
+      </select>
+      <div style="flex:1"></div>
+      <button class="btn ghost sm" onclick="importKolsCsv()">📤 导入CSV</button>
+      <button class="btn sm" onclick="addKol()">+ 添加达人</button>
+    </div>
+    <div class="card"><table class="tbl"><thead><tr><th>达人</th><th>平台</th><th>粉丝</th><th>领域</th><th>互动率</th><th>报价(图文/视频)</th><th>级别</th><th>评分</th><th>操作</th></tr></thead><tbody>
+    ${kols.map(k=>`<tr ${k.blacklisted?'style="opacity:.5;"':''}>
+      <td>${k.name}${k.quality?' <span class="pill green">⭐优质</span>':''}${k.blacklisted?' <span class="pill red">黑名单</span>':''}</td><td>${k.platform}</td><td>${(k.followers/10000).toFixed(1)}万</td>
+      <td>${k.field}</td><td>${k.engagementRate}%</td><td>¥${(k.pricePhoto/1000)}k/¥${(k.priceVideo/1000)}k</td>
+      <td><span class="pill ${k.level==='S'?'red':k.level==='A'?'yellow':'muted'}">${k.level}</span></td>
+      <td>${'★'.repeat(Math.round(k.score))}<span style="color:var(--muted);font-size:11px;">${k.score}</span></td>
+      <td><button class="btn ghost sm" onclick="editKol('${k.id}')">编辑</button></td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
 function renderKolSeeding(){
   if(!State.data.kolData) State.data.kolData = seedKolData();
   const kd = State.data.kolData;
@@ -6638,42 +6680,7 @@ function renderKolSeeding(){
 
   let content = '';
   if(tab === 'library'){
-    const search = State.kolSearch || '';
-    const levelFilter = State.kolLevelFilter || '全部';
-    let kols = kd.kols.filter(k => !search || k.name.includes(search) || k.field.includes(search));
-    if(levelFilter!=='全部') kols = kols.filter(k=>k.level===levelFilter);
-    const recs = identifyQualityKols();
-    const recBlock = recs.length ? `
-      <div class="card" style="margin-bottom:16px;border-left:3px solid var(--frog-mint);">
-        <div style="font-size:13px;font-weight:700;margin-bottom:8px;">⭐ 优质达人自动识别 (${recs.length})</div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">系统从所有合作数据中识别出表现优异(ROI≥3.0且转化达标)、尚未标记为优质的达人，确认后收录为优质达人</div>
-        <table class="tbl"><thead><tr><th>达人</th><th>平台</th><th>合作次数</th><th>平均ROI</th><th>平均CPE</th><th class="center">操作</th></tr></thead><tbody>
-        ${recs.map(r=>`<tr>
-          <td><strong>${r.kolName}</strong></td><td>${r.platform||'-'}</td><td>${r.count}</td>
-          <td style="color:var(--frog-mint);font-weight:700;">${r.avgRoi.toFixed(2)}</td><td>¥${r.avgCpe.toFixed(2)}</td>
-          <td class="center"><button class="btn sm" onclick="confirmQualityKol('${r.kolId}')">确认收录</button></td>
-        </tr>`).join('')}
-        </tbody></table>
-      </div>` : '';
-    content = recBlock + `
-      <div style="display:flex;gap:12px;margin-bottom:12px;align-items:center;">
-        <input class="input" style="width:200px;" placeholder="搜索达人/领域" value="${search}" oninput="State.kolSearch=this.value;renderKolSeeding()">
-        <select class="select" style="width:100px;" onchange="State.kolLevelFilter=this.value;renderKolSeeding()">
-          <option ${levelFilter==='全部'?'selected':''}>全部</option><option ${levelFilter==='S'?'selected':''}>S</option><option ${levelFilter==='A'?'selected':''}>A</option><option ${levelFilter==='B'?'selected':''}>B</option>
-        </select>
-        <div style="flex:1"></div>
-        <button class="btn ghost sm" onclick="importKolsCsv()">📤 导入CSV</button>
-        <button class="btn sm" onclick="addKol()">+ 添加达人</button>
-      </div>
-      <div class="card"><table class="tbl"><thead><tr><th>达人</th><th>平台</th><th>粉丝</th><th>领域</th><th>互动率</th><th>报价(图文/视频)</th><th>级别</th><th>评分</th><th>操作</th></tr></thead><tbody>
-      ${kols.map(k=>`<tr ${k.blacklisted?'style="opacity:.5;"':''}>
-        <td>${k.name}${k.quality?' <span class="pill green">⭐优质</span>':''}${k.blacklisted?' <span class="pill red">黑名单</span>':''}</td><td>${k.platform}</td><td>${(k.followers/10000).toFixed(1)}万</td>
-        <td>${k.field}</td><td>${k.engagementRate}%</td><td>¥${(k.pricePhoto/1000)}k/¥${(k.priceVideo/1000)}k</td>
-        <td><span class="pill ${k.level==='S'?'red':k.level==='A'?'yellow':'muted'}">${k.level}</span></td>
-        <td>${'★'.repeat(Math.round(k.score))}<span style="color:var(--muted);font-size:11px;">${k.score}</span></td>
-        <td><button class="btn ghost sm" onclick="editKol('${k.id}')">编辑</button></td>
-      </tr>`).join('')}
-      </tbody></table></div>`;
+    content = kolLibraryContentHTML();
   } else if(tab === 'projects'){
     content = `<div style="display:flex;margin-bottom:12px;"><div style="flex:1"></div><button class="btn sm" onclick="addKolProject()">+ 新建项目</button></div>
       <div class="grid grid-2">${kd.projects.map(p => {
@@ -6731,7 +6738,7 @@ function renderKolSeeding(){
   }
 
   // #19 子模块顺序: 年度项目情况 / 效果预览 / 种草项目 (达人资源库已并入「外部资产管理」)
-  const subs = [['annual','年度项目情况'],['overview','效果预览'],['projects','种草项目'],['library','达人资源库']];
+  const subs = [['annual','年度项目情况'],['overview','效果预览'],['projects','种草项目']];
   const html = `
     ${header('种草推广','KOL SEEDING','06 · 营销推广追踪','达人种草项目全流程追踪')}
     <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid var(--line-2);">
@@ -6835,7 +6842,7 @@ function saveKol(id){
   const kols = State.data.kolData.kols;
   if(id){ const ex = kols.find(x=>x.id===id); Object.assign(ex, k); }
   else kols.push({id:'K'+Date.now(), ...k, blacklisted:false, blacklistReason:''});
-  Storage.save(State.data); closeModal('modalGeneric'); renderKolSeeding();
+  Storage.save(State.data); closeModal('modalGeneric'); renderKolHost();
 }
 
 function toggleKolBlacklist(id){
@@ -6846,7 +6853,7 @@ function toggleKolBlacklist(id){
     if(reason===null) return;
     k.blacklisted=true; k.blacklistReason=reason;
   } else { k.blacklisted=false; k.blacklistReason=''; }
-  Storage.save(State.data); closeModal('modalGeneric'); renderKolSeeding();
+  Storage.save(State.data); closeModal('modalGeneric'); renderKolHost();
 }
 
 function addKolProject(){
@@ -7093,7 +7100,7 @@ function confirmQualityKol(kolId){
     k.quality = true;
     if(k.level==='B') k.level='A';
   }
-  Storage.save(State.data); renderKolSeeding();
+  Storage.save(State.data); renderKolHost();
 }
 
 function importKolsCsv(){
@@ -7102,7 +7109,7 @@ function importKolsCsv(){
     title:'导入达人资源', sub:'达人名,平台,粉丝量,领域,联系方式,MCN,图文报价,视频报价,直播报价,互动率,级别',
     rowToObj:(c,i)=> c[0] ? {id:'K'+Date.now()+i, name:c[0], platform:c[1]||'小红书', followers:+c[2]||0, field:c[3]||'', contact:c[4]||'', mcn:c[5]||'', pricePhoto:+c[6]||0, priceVideo:+c[7]||0, priceLive:+c[8]||0, engagementRate:+c[9]||0, level:c[10]||'B', score:0, quality:false, blacklisted:false, blacklistReason:''} : null,
     onImport:(items)=>{ items.forEach(x=>State.data.kolData.kols.push(x)); },
-    after:renderKolSeeding
+    after:renderKolHost
   });
 }
 
@@ -7729,19 +7736,23 @@ function renderVendors(){
   const vendors = State.data.vendors;
   const stars = n => '★'.repeat(Math.floor(n)) + (n%1>=0.5?'½':'') + '☆'.repeat(5-Math.ceil(n));
 
+  const vtab = State._vendorTab||'list';
   const html = `
-    ${header('供应商管理', 'VENDOR MANAGEMENT', '13 · 协作与洞察', '供应商档案、合作历史、合同管理与黑名单管理。')}
+    ${header('外部资产管理', 'EXTERNAL ASSETS', '12 · 协作与洞察', '供应商档案、达人资源库、合同管理与付款/用印/寄件/归档状态追踪。')}
     <div class="sub-tabs">
-      <div class="sub-tab ${(State._vendorTab||'list')==='list'?'active':''}" onclick="State._vendorTab='list';renderVendors();">供应商列表</div>
-      <div class="sub-tab ${State._vendorTab==='contracts'?'active':''}" onclick="State._vendorTab='contracts';renderVendors();">合同管理</div>
+      <div class="sub-tab ${vtab==='list'?'active':''}" onclick="State._vendorTab='list';renderVendors();">供应商</div>
+      <div class="sub-tab ${vtab==='kol'?'active':''}" onclick="State._vendorTab='kol';renderVendors();">达人资源库</div>
+      <div class="sub-tab ${vtab==='contracts'?'active':''}" onclick="State._vendorTab='contracts';renderVendors();">合同管理</div>
     </div>
+    ${vtab==='kol' ? kolLibraryContentHTML() : `
     <div class="toolbar">
-      ${(State._vendorTab||'list')==='list'?`
+      ${vtab==='list'?`
       <button class="btn" onclick="openAddVendor()">+ 新增供应商</button>
       <button class="btn ghost" onclick="importVendorsCsv()">📤 CSV导入</button>
       <button class="btn ghost" onclick="downloadVendorTemplate()">📥 CSV模板</button>
       `:`
       <button class="btn" onclick="openAddContract()">+ 新增合同</button>
+      <button class="btn ghost" onclick="importContractsCsv()">📤 合同批量上传</button>
       `}
       <div class="spacer"></div>
       <div style="display:flex;gap:8px;">
@@ -7749,7 +7760,7 @@ function renderVendors(){
         <span class="pill risk dot">黑名单 ${vendors.filter(v=>v.blacklisted).length}</span>
       </div>
     </div>
-    ${(State._vendorTab||'list')==='list'?`
+    ${vtab==='list'?`
     <div class="grid grid-2">
       ${vendors.map(v=>`
         <div class="card elevated" style="${v.blacklisted?'border-color:#fee2e2;background:#fff8f8;':''}">
@@ -7766,9 +7777,16 @@ function renderVendors(){
               <div style="font-size:11px;color:var(--muted);margin-top:2px;">${v.rating}/5.0</div>
             </div>
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
             ${v.categories.map(c=>`<span class="pill blue">${c}</span>`).join('')}
           </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;">
+            ${v.paymentStatus?`<span class="pill ${v.paymentStatus==='已结清'?'mint':v.paymentStatus==='未付款'?'risk':'gray'}">💰 ${v.paymentStatus}</span>`:''}
+            ${v.stampStatus==='已用印'?'<span class="pill gray">已用印</span>':''}
+            ${v.mailStatus&&v.mailStatus!=='未寄件'?`<span class="pill gray">📮 ${v.mailStatus}</span>`:''}
+            ${v.archiveStatus==='已归档'?'<span class="pill mint">📁 已归档</span>':''}
+          </div>
+          ${(v.linkedProjects&&v.linkedProjects.length)?`<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">🔗 关联: ${v.linkedProjects.join('、')}</div>`:''}
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn ghost sm" onclick="openVendorDetail('${v.id}')">查看详情</button>
             <button class="btn ghost sm" onclick="openEditVendor('${v.id}')">编辑</button>
@@ -7782,6 +7800,7 @@ function renderVendors(){
     </div>
     `:`
     ${renderContractsTab(vendors)}
+    `}
     `}
   `;
   $('#main').innerHTML = `<section class="section active">${html}</section>`;
@@ -7846,14 +7865,22 @@ function vendorFormHTML(v){
     <div class="form-row"><div class="form-group"><label>供应商名称</label><input class="input" id="vf_name" value="${v.name||''}"></div><div class="form-group"><label>联系人</label><input class="input" id="vf_contact" value="${v.contact||''}"></div></div>
     <div class="form-row"><div class="form-group"><label>电话</label><input class="input" id="vf_phone" value="${v.phone||''}"></div><div class="form-group"><label>邮箱</label><input class="input" id="vf_email" value="${v.email||''}"></div></div>
     <div class="form-row full"><div class="form-group"><label>服务类别 (逗号分隔)</label><input class="input" id="vf_cats" value="${(v.categories||[]).join(',')}"></div></div>
-    <div class="form-row"><div class="form-group"><label>评分 (0-5)</label><input class="input" id="vf_rating" type="number" min="0" max="5" step="0.1" value="${v.rating||3}"></div></div>
+    <div class="form-row"><div class="form-group"><label>评分 (0-5)</label><input class="input" id="vf_rating" type="number" min="0" max="5" step="0.1" value="${v.rating||3}"></div>
+      <div class="form-group"><label>付款状态</label><select class="select" id="vf_payment">${['未付款','部分付款','已结清','待开票'].map(s=>`<option ${v.paymentStatus===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin:8px 0 4px;letter-spacing:1px;">合同流转状态</div>
+    <div class="form-row">
+      <div class="form-group"><label>用印</label><select class="select" id="vf_stamp">${['未用印','已用印'].map(s=>`<option ${v.stampStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="form-group"><label>寄件</label><select class="select" id="vf_mail">${['未寄件','已寄出','已签回'].map(s=>`<option ${v.mailStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="form-group"><label>归档</label><select class="select" id="vf_archive">${['未归档','已归档'].map(s=>`<option ${v.archiveStatus===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="form-row full"><div class="form-group"><label>关联项目/Campaign (逗号分隔，与任务/Campaign双向关联)</label><input class="input" id="vf_links" value="${(v.linkedProjects||[]).join(',')}" placeholder="如：618大促Campaign,春季新品"></div></div>
   `;
 }
 
 function saveVendor(){
   const name = $('#vf_name').value.trim();
   if(!name){ alert('请填写供应商名称'); return; }
-  const obj = { id: State._editingVendorId || 'V'+Date.now(), name, contact:$('#vf_contact').value, phone:$('#vf_phone').value, email:$('#vf_email').value, categories:$('#vf_cats').value.split(',').map(s=>s.trim()).filter(Boolean), rating:parseFloat($('#vf_rating').value)||3, projects:[], contracts:[], blacklisted:false, blacklistReason:'' };
+  const obj = { id: State._editingVendorId || 'V'+Date.now(), name, contact:$('#vf_contact').value, phone:$('#vf_phone').value, email:$('#vf_email').value, categories:$('#vf_cats').value.split(',').map(s=>s.trim()).filter(Boolean), rating:parseFloat($('#vf_rating').value)||3, paymentStatus:$('#vf_payment').value, stampStatus:$('#vf_stamp').value, mailStatus:$('#vf_mail').value, archiveStatus:$('#vf_archive').value, linkedProjects:$('#vf_links').value.split(',').map(s=>s.trim()).filter(Boolean), projects:[], contracts:[], blacklisted:false, blacklistReason:'' };
   if(State._editingVendorId){
     const idx = State.data.vendors.findIndex(x=>x.id===State._editingVendorId);
     if(idx>=0){ const existing = State.data.vendors[idx]; obj.projects=existing.projects; obj.contracts=existing.contracts; obj.blacklisted=existing.blacklisted; obj.blacklistReason=existing.blacklistReason; State.data.vendors[idx]=obj; }
@@ -7968,6 +7995,28 @@ function deleteContract(vendorId, contractId){
   const v = (State.data.vendors||[]).find(x=>x.id===vendorId);
   if(v) v.contracts = (v.contracts||[]).filter(x=>x.id!==contractId);
   Storage.save(State.data); renderVendors();
+}
+
+/* 合同批量上传: 按供应商名称匹配，自动归入对应供应商的合同列表 */
+function importContractsCsv(){
+  csvImportFlow({
+    title:'合同批量上传', sub:'供应商名称,合同编号,合同名称,金额,付款状态,开始日期,结束日期,备注',
+    expectedCols: 8,
+    rowToObj:(col,i)=>{
+      if(!col[0]||!col[1]) return null;
+      return {_vendorName:col[0].trim(), id:'CT'+Date.now()+i, number:col[1].trim(), title:col[2]||'', amount:+col[3]||0, payStatus:col[4]||'未付款', startDate:col[5]||'', endDate:col[6]||'', notes:col[7]||''};
+    },
+    onImport:(items)=>{
+      items.forEach(c=>{
+        const vn = c._vendorName; delete c._vendorName;
+        let v = State.data.vendors.find(x=>x.name===vn);
+        if(!v){ v = {id:'V'+Date.now()+Math.random().toString(36).slice(2,5), name:vn, contact:'',phone:'',email:'',categories:[],rating:3,projects:[],contracts:[],blacklisted:false,blacklistReason:''}; State.data.vendors.push(v); }
+        if(!v.contracts) v.contracts=[];
+        v.contracts.push(c);
+      });
+    },
+    after:renderVendors
+  });
 }
 
 function downloadVendorTemplate(){
