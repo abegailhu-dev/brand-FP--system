@@ -2277,8 +2277,109 @@ function renderDashboard(){
         </div>
       </div>
     </div>
+
+    <div class="grid grid-2" style="margin-top:28px;">
+      ${systemSummaryHTML()}
+      ${managerFeedbackHTML()}
+    </div>
   `;
   $('#main').innerHTML = `<section class="section active">${html}</section>`;
+}
+
+/* #7 系统周期性智能摘要与建议 — 基于实时数据自动生成 */
+function systemInsights(){
+  const ins = [];
+  const d = State.data;
+  // 预算执行
+  if(d.budgetData){
+    const exp = d.budgetData.expenses||[];
+    const total = (d.dashboardData&&d.dashboardData.budget&&d.dashboardData.budget.total)||0;
+    const used = exp.reduce((s,e)=>s+(e.amount||0),0);
+    if(total){
+      const pct = Math.round(used/total*100);
+      const now = new Date(); const yearPct = Math.round(((now.getMonth())*30+now.getDate())/365*100);
+      if(pct > yearPct+15) ins.push({type:'risk', text:`预算执行率 ${pct}%，已超时间进度（约${yearPct}%），注意年度预算节奏。`});
+      else if(pct < yearPct-20) ins.push({type:'mint', text:`预算执行率 ${pct}%，低于时间进度，可适度加大重点项目投放。`});
+    }
+  }
+  // 任务完成
+  const wk = d.tasks.filter(t=>t.weekOf===d.currentWeek);
+  if(wk.length){
+    const doneT = wk.filter(t=>t.status==='已完成').length;
+    const pct = Math.round(doneT/wk.length*100);
+    ins.push({type:pct>=70?'mint':pct>=40?'warn':'risk', text:`本周任务完成率 ${pct}%（${doneT}/${wk.length}），${pct<40?'进度偏慢，建议聚焦P0/P1。':'保持节奏。'}`});
+    // overload
+    const load={}; activeEmployees().filter(e=>e.name!=='胡瑕').forEach(e=>load[e.name]=0);
+    wk.forEach(t=>{ if(load[t.assignee]!==undefined) load[t.assignee]+=t.estimatedHours; });
+    const over = Object.entries(load).filter(([n,h])=>h>40).map(([n])=>n);
+    if(over.length) ins.push({type:'warn', text:`${over.join('、')} 本周工时超过40h，注意负载均衡。`});
+  }
+  // 人才缺口
+  const vac = (d.employees||[]).filter(e=>e.status==='空缺').length;
+  if(vac) ins.push({type:'warn', text:`当前有 ${vac} 个岗位空缺，建议推进招聘。`});
+  // 种草爆文
+  if(d.kolData){
+    const collabs = d.kolData.projects.flatMap(p=>p.collaborations||[]);
+    const hot = collabs.filter(c=>c.isHot).length;
+    if(collabs.length) ins.push({type:'mint', text:`种草累计 ${collabs.length} 篇合作，爆文 ${hot} 篇（爆文率 ${Math.round(hot/collabs.length*100)}%）。`});
+  }
+  if(!ins.length) ins.push({type:'gray', text:'暂无显著异常，各项指标运行平稳。'});
+  return ins;
+}
+function systemSummaryHTML(){
+  const ins = systemInsights();
+  const now = new Date();
+  return `<div class="card elevated">
+    <div class="card-title">🤖 系统智能摘要与建议</div>
+    <div class="card-desc">基于实时数据自动生成 · 更新于 ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}</div>
+    ${ins.map(i=>`<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line-2);">
+      <span class="pill ${i.type}" style="margin-top:2px;">${i.type==='risk'?'关注':i.type==='warn'?'提示':i.type==='mint'?'良好':'信息'}</span>
+      <span style="font-size:13px;color:var(--ink-3);flex:1;">${i.text}</span>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* #7 管理者反馈窗口 */
+function managerFeedbackHTML(){
+  if(!State.data.managerFeedback) State.data.managerFeedback = [];
+  const fb = State.data.managerFeedback;
+  return `<div class="card elevated">
+    <div class="card-title">💬 管理者反馈 <button class="btn sm ghost" style="margin-left:auto;" onclick="openManagerFeedback()">+ 新增反馈</button></div>
+    <div class="card-desc">管理者意见、决策记录与改进建议留存</div>
+    ${fb.length?fb.slice().reverse().map(f=>`<div style="padding:10px 0;border-bottom:1px solid var(--line-2);">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;">
+        <span style="font-size:13px;font-weight:700;">${f.author}</span>
+        <span class="pill ${f.category==='表扬'?'mint':f.category==='问题'?'risk':'blue'}">${f.category}</span>
+        <span style="font-size:11px;color:var(--muted);">${f.date}</span>
+        <div style="flex:1"></div>
+        <span style="cursor:pointer;color:var(--muted);" onclick="deleteManagerFeedback('${f.id}')">✕</span>
+      </div>
+      <div style="font-size:13px;color:var(--ink-3);">${f.text}</div>
+    </div>`).join(''):'<div style="color:var(--muted);font-size:12px;padding:10px 0;">暂无反馈，点击右上角新增</div>'}
+  </div>`;
+}
+function openManagerFeedback(){
+  $('#modalGenericTitle').textContent='新增管理者反馈'; $('#modalGenericSub').textContent='MANAGER FEEDBACK';
+  $('#modalGenericBody').innerHTML = `
+    <div class="form-row">
+      <div class="form-group"><label>反馈人</label><select class="select" id="mfAuthor">${activeEmployees().filter(e=>isManager(e)).map(e=>'<option>'+e.name+'</option>').join('')||'<option>管理者</option>'}</select></div>
+      <div class="form-group"><label>类别</label><select class="select" id="mfCategory"><option>建议</option><option>表扬</option><option>问题</option><option>决策</option></select></div>
+    </div>
+    <div class="form-group"><label>反馈内容</label><textarea class="input" id="mfText" style="min-height:100px;"></textarea></div>`;
+  $('#modalGenericFoot').innerHTML = `<button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button><button class="btn" onclick="saveManagerFeedback()">保存</button>`;
+  openModal('modalGeneric');
+}
+function saveManagerFeedback(){
+  const text = $('#mfText').value.trim();
+  if(!text){ alert('请填写反馈内容'); return; }
+  if(!State.data.managerFeedback) State.data.managerFeedback=[];
+  State.data.managerFeedback.push({id:'MF'+Date.now(), author:$('#mfAuthor').value, category:$('#mfCategory').value, text, date:new Date().toISOString().slice(0,10)});
+  Storage.save(State.data); closeModal('modalGeneric'); renderDashboard();
+}
+function deleteManagerFeedback(id){
+  if(!confirm('确认删除此反馈?')) return;
+  State.data.managerFeedback = State.data.managerFeedback.filter(x=>x.id!==id);
+  Storage.save(State.data); renderDashboard();
 }
 
 function togglePriority(id){
