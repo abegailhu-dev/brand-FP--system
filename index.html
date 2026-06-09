@@ -3757,7 +3757,7 @@ function csvImportFlow(config){
   input.onchange = ev => {
     const file = ev.target.files[0]; if(!file) return;
     const isExcel = /\.(xlsx|xls)$/i.test(file.name);
-    const processRows = (allRows) => {
+    const processRows = (allRows, sheetStats) => {
       try{
         if(allRows.length < 2){ alert('文件为空或仅有表头，请检查内容'); return; }
         const headers = allRows[0].map(h => String(h||'').trim());
@@ -3775,8 +3775,10 @@ function csvImportFlow(config){
         const errHtml = parseErrors.length ? `<div style="color:var(--risk);font-size:11px;background:#fff1f2;border-radius:6px;padding:8px 10px;margin-bottom:8px;max-height:80px;overflow:auto;"><strong>⚠ ${parseErrors.length} 行列数不符（仍可尝试导入，不符行将被跳过）：</strong><br>${parseErrors.slice(0,5).map(s=>'· '+s).join('<br>')}${parseErrors.length>5?'<br>…等':''}` + '</div>' : '';
         $('#modalGenericTitle').textContent = config.title || '数据导入';
         $('#modalGenericSub').textContent = config.sub || 'IMPORT';
+        const sheetHtml = (sheetStats && sheetStats.length>1) ? `<div style="font-size:11px;color:var(--frog-blue,#5BA8D6);margin-bottom:6px;background:rgba(91,168,214,0.08);border-radius:6px;padding:6px 10px;">📑 已合并 ${sheetStats.length} 个工作表：${sheetStats.join(' · ')}</div>` : '';
         $('#modalGenericBody').innerHTML = `
           <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">📄 ${file.name} · ${isExcel?'Excel':'CSV'} · ${rows.length} 行数据，${headers.length} 列（追加，不覆盖现有）</div>
+          ${sheetHtml}
           ${errHtml}
           <div style="max-height:240px;overflow:auto;border:1px solid var(--line-2);border-radius:8px;">
             <table class="tbl" style="font-size:11px;"><thead><tr>${headers.slice(0,7).map(h=>'<th>'+h+'</th>').join('')}${headers.length>7?'<th>…+'+( headers.length-7)+'列</th>':''}</tr></thead><tbody>
@@ -3810,9 +3812,33 @@ function csvImportFlow(config){
       reader.onload = e => {
         try{
           const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          const allRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
-          processRows(allRows);
+          const sheetNames = wb.SheetNames || [];
+          if(!sheetNames.length){ alert('Excel中没有工作表'); return; }
+          let merged = [];           // 合并后的全部行（首行为表头）
+          let headerKey = '';        // 用于识别并跳过各表重复表头
+          const sheetStats = [];
+          sheetNames.forEach((name, si) => {
+            const ws = wb.Sheets[name];
+            const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''})
+              .filter(r => r.some(c => String(c===null||c===undefined?'':c).trim()));
+            if(!rows.length) return;
+            if(merged.length === 0){
+              // 首个有效工作表：保留其表头
+              merged = rows.slice();
+              headerKey = rows[0].map(c=>String(c||'').trim()).join('|');
+              sheetStats.push(`${name}: ${rows.length-1} 行`);
+            } else {
+              // 后续工作表：若首行与表头一致则跳过该表头，否则全部并入
+              const firstKey = rows[0].map(c=>String(c||'').trim()).join('|');
+              const dataRows = (firstKey === headerKey) ? rows.slice(1) : rows;
+              merged = merged.concat(dataRows);
+              sheetStats.push(`${name}: ${dataRows.length} 行`);
+            }
+          });
+          if(merged.length < 2){ alert('所有工作表均为空或仅有表头'); return; }
+          if(sheetNames.length > 1) console.log('Excel多表合并:', sheetStats.join(' / '));
+          window.__lastImportSheetStats = sheetStats;
+          processRows(merged, sheetStats);
         } catch(err){ alert('Excel解析失败: '+err.message); }
       };
       reader.readAsArrayBuffer(file);
