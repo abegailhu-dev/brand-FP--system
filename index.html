@@ -8245,11 +8245,20 @@ function importVendorsCsv(){
 function renderAnalytics(){
   if(!State.data.analyticsData) State.data.analyticsData = seedAnalytics();
   const ad = State.data.analyticsData;
-  const subView = State._analyticsTab || 'competitors';
-  const tabs = ['competitors','metrics','roi'];
-  const tabNames = {competitors:'竞品分析', metrics:'品牌指数', roi:'渠道ROI'};
+  const subView = State._analyticsTab || 'metrics';
+  // #22 顺序: 品牌指数分析 / 品牌自媒体分析 / 渠道销售排名分析 / 部门项目员工任务分析 (+竞品/ROI)
+  const tabs = ['metrics','social','sales','tasks','competitors','roi'];
+  const tabNames = {metrics:'品牌指数分析', social:'品牌自媒体分析', sales:'渠道销售排名分析', tasks:'部门项目员工任务分析', competitors:'竞品分析', roi:'渠道ROI'};
 
   let body = '';
+
+  if(subView === 'social'){
+    body = analyticsSocialHTML();
+  } else if(subView === 'sales'){
+    body = analyticsSalesHTML();
+  } else if(subView === 'tasks'){
+    body = analyticsTasksHTML();
+  } else
 
   if(subView === 'competitors'){
     body = `<div class="toolbar"><button class="btn" onclick="openAddCompetitor()">+ 新增竞品</button></div>
@@ -8354,6 +8363,160 @@ function renderAnalytics(){
     ${body}
   `;
   $('#main').innerHTML = `<section class="section active">${html}</section>`;
+  if(subView==='social') setTimeout(renderSocialAnalyticsCharts, 80);
+  if(subView==='sales') setTimeout(renderSalesAnalyticsCharts, 80);
+  if(subView==='tasks') setTimeout(renderTasksAnalyticsCharts, 80);
+}
+
+/* ---- #22 品牌自媒体分析 ---- */
+function analyticsSocialHTML(){
+  const sm = State.data.socialMedia;
+  if(!sm || !sm.records || !sm.records.length) return '<div class="card elevated"><div style="color:var(--muted);padding:20px;">暂无自媒体数据，请先在「自媒体数据」模块录入。</div></div>';
+  // 各平台取最新一条
+  const byPlat = {};
+  sm.records.forEach(r=>{ if(!byPlat[r.platform] || r.date>byPlat[r.platform].date) byPlat[r.platform]=r; });
+  const plats = Object.values(byPlat);
+  const totalFans = plats.reduce((s,r)=>s+(r.followers||0),0);
+  const avgEng = plats.length ? (plats.reduce((s,r)=>s+(+r.engagementRate||0),0)/plats.length) : 0;
+  return `<div class="grid grid-3" style="margin-bottom:24px;">
+      <div class="stat"><div class="stat-deco"></div><div class="stat-label">全平台粉丝</div><div class="stat-value">${(totalFans/10000).toFixed(1)}<span class="stat-suffix">万</span></div></div>
+      <div class="stat accent"><div class="stat-deco"></div><div class="stat-label">覆盖平台</div><div class="stat-value">${plats.length}</div></div>
+      <div class="stat"><div class="stat-deco"></div><div class="stat-label">平均互动率</div><div class="stat-value">${avgEng.toFixed(1)}<span class="stat-suffix">%</span></div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card elevated"><div class="card-title">各平台粉丝分布</div><div class="chart-box"><canvas id="anaSocialFans"></canvas></div></div>
+      <div class="card elevated"><div class="card-title">各平台互动率对比</div><div class="chart-box"><canvas id="anaSocialEng"></canvas></div></div>
+    </div>
+    <div class="card elevated" style="margin-top:20px;"><div class="card-title">平台明细 (最新)</div>
+      <table class="tbl"><thead><tr><th>平台</th><th class="center">粉丝</th><th class="center">发布</th><th class="center">阅读/播放</th><th class="center">互动率</th><th class="center">更新日期</th></tr></thead><tbody>
+      ${plats.sort((a,b)=>b.followers-a.followers).map(r=>`<tr><td><strong>${r.platform}</strong></td><td class="center num">${(r.followers/10000).toFixed(1)}万</td><td class="center num">${r.posts||0}</td><td class="center num">${(((r.reads||r.plays||0))/10000).toFixed(1)}万</td><td class="center num">${r.engagementRate||0}%</td><td class="center">${r.date}</td></tr>`).join('')}
+      </tbody></table>
+    </div>`;
+}
+function renderSocialAnalyticsCharts(){
+  const sm = State.data.socialMedia; if(!sm||!sm.records) return;
+  const byPlat = {}; sm.records.forEach(r=>{ if(!byPlat[r.platform]||r.date>byPlat[r.platform].date) byPlat[r.platform]=r; });
+  const plats = Object.values(byPlat);
+  barChart('anaSocialFans', plats.map(r=>r.platform), [{label:'粉丝(万)', data:plats.map(r=>+(r.followers/10000).toFixed(1)), backgroundColor:'#5BA8D6', borderRadius:6}], {legend:false});
+  barChart('anaSocialEng', plats.map(r=>r.platform), [{label:'互动率(%)', data:plats.map(r=>+r.engagementRate||0), backgroundColor:'#7FCEAB', borderRadius:6}], {legend:false});
+}
+
+/* ---- #22 渠道销售排名分析 ---- */
+function analyticsSalesHTML(){
+  const ad = State.data.analyticsData;
+  if(!ad.channelSales) ad.channelSales = seedChannelSales();
+  const list = ad.channelSales.slice().sort((a,b)=>b.gmv-a.gmv);
+  const totalGmv = list.reduce((s,c)=>s+(c.gmv||0),0);
+  return `<div class="toolbar"><button class="btn" onclick="openAddChannelSales()">+ 新增渠道销售</button><div class="spacer"></div><span class="pill blue">合计 GMV ¥${(totalGmv/10000).toFixed(1)}万</span></div>
+    <div class="card elevated"><div class="card-title">渠道销售额排名</div><div class="chart-box"><canvas id="anaSalesBar"></canvas></div></div>
+    <div class="card elevated" style="margin-top:20px;">
+      <table class="tbl"><thead><tr><th class="center">排名</th><th>渠道</th><th class="center">销售额GMV</th><th class="center">订单数</th><th class="center">客单价</th><th class="center">占比</th><th class="center">目标达成</th><th>操作</th></tr></thead><tbody>
+      ${list.map((c,i)=>{
+        const aov = c.orders ? Math.round(c.gmv/c.orders) : 0;
+        const share = totalGmv ? Math.round(c.gmv/totalGmv*100) : 0;
+        const tgtPct = c.target ? Math.round(c.gmv/c.target*100) : 0;
+        const medal = i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1);
+        return `<tr><td class="center" style="font-size:15px;">${medal}</td><td><strong>${c.channel}</strong></td>
+          <td class="center num">¥${(c.gmv/10000).toFixed(1)}万</td><td class="center num">${(c.orders||0).toLocaleString()}</td>
+          <td class="center num">¥${aov}</td><td class="center num">${share}%</td>
+          <td class="center">${c.target?`<span class="pill ${tgtPct>=100?'mint':tgtPct>=70?'blue':'warn'}">${tgtPct}%</span>`:'<span style="color:var(--muted);">—</span>'}</td>
+          <td><button class="btn ghost sm" onclick="editChannelSales('${c.id}')">编辑</button> <button class="btn ghost sm" style="color:var(--risk);" onclick="deleteChannelSales('${c.id}')">删除</button></td></tr>`;
+      }).join('')}
+      </tbody></table>
+    </div>`;
+}
+function renderSalesAnalyticsCharts(){
+  const ad = State.data.analyticsData; if(!ad.channelSales) return;
+  const list = ad.channelSales.slice().sort((a,b)=>b.gmv-a.gmv);
+  barChart('anaSalesBar', list.map(c=>c.channel), [{label:'GMV(万)', data:list.map(c=>+(c.gmv/10000).toFixed(1)), backgroundColor:['#E85A4F','#F5C842','#7FCEAB','#5BA8D6','#A8D4E8','#c4b5fd'], borderRadius:6}], {legend:false});
+}
+function seedChannelSales(){
+  return [
+    {id:'CS1', channel:'天猫旗舰店', gmv:3200000, orders:32000, target:3000000},
+    {id:'CS2', channel:'抖音小店', gmv:2400000, orders:28000, target:2500000},
+    {id:'CS3', channel:'京东自营', gmv:1500000, orders:14000, target:1600000},
+    {id:'CS4', channel:'拼多多', gmv:980000, orders:21000, target:1000000},
+    {id:'CS5', channel:'线下渠道', gmv:1800000, orders:9000, target:2000000}
+  ];
+}
+function channelSalesForm(c){
+  return `<div class="form-group"><label>渠道名称</label><input class="input" id="csChannel" value="${c.channel||''}"></div>
+    <div class="form-row"><div class="form-group"><label>销售额GMV(元)</label><input class="input" type="number" id="csGmv" value="${c.gmv||''}"></div>
+      <div class="form-group"><label>订单数</label><input class="input" type="number" id="csOrders" value="${c.orders||''}"></div></div>
+    <div class="form-group"><label>目标GMV(元，可选)</label><input class="input" type="number" id="csTarget" value="${c.target||''}"></div>`;
+}
+function openAddChannelSales(){
+  $('#modalGenericTitle').textContent='新增渠道销售'; $('#modalGenericSub').textContent='CHANNEL SALES';
+  $('#modalGenericBody').innerHTML = channelSalesForm({});
+  $('#modalGenericFoot').innerHTML = `<button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button><button class="btn" onclick="saveChannelSales()">保存</button>`;
+  openModal('modalGeneric');
+}
+function editChannelSales(id){
+  const c = State.data.analyticsData.channelSales.find(x=>x.id===id); if(!c) return;
+  $('#modalGenericTitle').textContent='编辑渠道销售'; $('#modalGenericSub').textContent='CHANNEL SALES';
+  $('#modalGenericBody').innerHTML = channelSalesForm(c);
+  $('#modalGenericFoot').innerHTML = `<button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button><button class="btn" onclick="saveChannelSales('${id}')">保存</button>`;
+  openModal('modalGeneric');
+}
+function saveChannelSales(id){
+  const rec = {channel:$('#csChannel').value.trim(), gmv:+$('#csGmv').value||0, orders:+$('#csOrders').value||0, target:+$('#csTarget').value||0};
+  if(!rec.channel){ alert('请填写渠道名称'); return; }
+  const ad = State.data.analyticsData; if(!ad.channelSales) ad.channelSales=[];
+  if(id){ Object.assign(ad.channelSales.find(x=>x.id===id), rec); }
+  else ad.channelSales.push({id:'CS'+Date.now(), ...rec});
+  Storage.save(State.data); closeModal('modalGeneric'); renderAnalytics();
+}
+function deleteChannelSales(id){
+  if(!confirm('确认删除?')) return;
+  const ad = State.data.analyticsData;
+  ad.channelSales = ad.channelSales.filter(x=>x.id!==id);
+  Storage.save(State.data); renderAnalytics();
+}
+
+/* ---- #22 部门项目员工任务分析 ---- */
+function analyticsTasksHTML(){
+  const tasks = State.data.tasks || [];
+  if(!tasks.length) return '<div class="card elevated"><div style="color:var(--muted);padding:20px;">暂无任务数据。</div></div>';
+  const done = tasks.filter(t=>t.status==='已完成').length;
+  const inProg = tasks.filter(t=>t.status==='进行中').length;
+  const todo = tasks.filter(t=>t.status==='待开始').length;
+  // by project
+  const byProj = {}; tasks.forEach(t=>{ const p=t.project||'未分类'; if(!byProj[p]) byProj[p]={total:0,done:0,hours:0}; byProj[p].total++; if(t.status==='已完成')byProj[p].done++; byProj[p].hours+=(t.estimatedHours||0); });
+  const projs = Object.entries(byProj).sort((a,b)=>b[1].total-a[1].total);
+  // by assignee
+  const byAsg = {}; tasks.forEach(t=>{ const a=t.assignee||'未分配'; if(!byAsg[a]) byAsg[a]={total:0,done:0,hours:0}; byAsg[a].total++; if(t.status==='已完成')byAsg[a].done++; byAsg[a].hours+=(t.estimatedHours||0); });
+  const asgs = Object.entries(byAsg).sort((a,b)=>b[1].total-a[1].total);
+  return `<div class="grid grid-4" style="margin-bottom:24px;">
+      <div class="stat"><div class="stat-deco"></div><div class="stat-label">任务总数</div><div class="stat-value">${tasks.length}</div></div>
+      <div class="stat accent"><div class="stat-deco"></div><div class="stat-label">已完成</div><div class="stat-value">${done}</div><div class="stat-foot">完成率 ${Math.round(done/tasks.length*100)}%</div></div>
+      <div class="stat warn"><div class="stat-deco"></div><div class="stat-label">进行中</div><div class="stat-value">${inProg}</div></div>
+      <div class="stat risk"><div class="stat-deco"></div><div class="stat-label">待开始</div><div class="stat-value">${todo}</div></div>
+    </div>
+    <div class="grid grid-2">
+      <div class="card elevated"><div class="card-title">各项目任务量</div><div class="chart-box"><canvas id="anaTaskProj"></canvas></div></div>
+      <div class="card elevated"><div class="card-title">各员工任务量</div><div class="chart-box"><canvas id="anaTaskAsg"></canvas></div></div>
+    </div>
+    <div class="grid grid-2" style="margin-top:20px;">
+      <div class="card elevated"><div class="card-title">项目维度明细</div>
+        <table class="tbl"><thead><tr><th>项目</th><th class="center">任务数</th><th class="center">完成率</th><th class="center">工时</th></tr></thead><tbody>
+        ${projs.map(([p,v])=>`<tr><td><strong>${p}</strong></td><td class="center num">${v.total}</td><td class="center"><span class="pill ${v.done/v.total>=0.7?'mint':v.done/v.total>=0.4?'blue':'warn'}">${Math.round(v.done/v.total*100)}%</span></td><td class="center num">${v.hours}h</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+      <div class="card elevated"><div class="card-title">员工维度明细</div>
+        <table class="tbl"><thead><tr><th>员工</th><th class="center">任务数</th><th class="center">完成率</th><th class="center">工时</th></tr></thead><tbody>
+        ${asgs.map(([a,v])=>`<tr><td><strong>${a}</strong></td><td class="center num">${v.total}</td><td class="center"><span class="pill ${v.done/v.total>=0.7?'mint':v.done/v.total>=0.4?'blue':'warn'}">${Math.round(v.done/v.total*100)}%</span></td><td class="center num">${v.hours}h</td></tr>`).join('')}
+        </tbody></table>
+      </div>
+    </div>`;
+}
+function renderTasksAnalyticsCharts(){
+  const tasks = State.data.tasks||[]; if(!tasks.length) return;
+  const byProj={}; tasks.forEach(t=>{ const p=t.project||'未分类'; byProj[p]=(byProj[p]||0)+1; });
+  const byAsg={}; tasks.forEach(t=>{ const a=t.assignee||'未分配'; byAsg[a]=(byAsg[a]||0)+1; });
+  const pe=Object.entries(byProj).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const ae=Object.entries(byAsg).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  barChart('anaTaskProj', pe.map(x=>x[0]), [{label:'任务数', data:pe.map(x=>x[1]), backgroundColor:'#5BA8D6', borderRadius:6}], {legend:false});
+  barChart('anaTaskAsg', ae.map(x=>x[0]), [{label:'任务数', data:ae.map(x=>x[1]), backgroundColor:'#7FCEAB', borderRadius:6}], {legend:false});
 }
 
 function openAddCompetitor(){
