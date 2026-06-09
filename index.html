@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=Noto+Serif+SC:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{
   --ink:#0a0a0a;
@@ -3748,34 +3749,35 @@ function parseCSVLine(line){
   return out;
 }
 
+/* Unified import flow: accepts .csv / .xlsx / .xls
+   config: { title, sub, expectedCols, rowToObj(cols, idx), onImport(items), after() } */
 function csvImportFlow(config){
   const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.csv';
+  input.type = 'file'; input.accept = '.csv,.xlsx,.xls';
   input.onchange = ev => {
     const file = ev.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
+    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+    const processRows = (allRows) => {
       try{
-        const lines = e.target.result.replace(/^﻿/,'').split(/\r?\n/).filter(l=>l.trim());
-        if(lines.length < 2){ alert('CSV文件为空或仅有表头，请检查文件内容'); return; }
-        const headers = parseCSVLine(lines[0]);
+        if(allRows.length < 2){ alert('文件为空或仅有表头，请检查内容'); return; }
+        const headers = allRows[0].map(h => String(h||'').trim());
         const expectedCols = config.expectedCols || null;
         const rows = []; const parseErrors = [];
-        lines.slice(1).forEach((l,i) => {
-          const c = parseCSVLine(l);
-          if(!c.join('').trim()) return;
-          if(expectedCols && c.length < expectedCols){
-            parseErrors.push(`第${i+2}行: 期望 ${expectedCols} 列，实际 ${c.length} 列（可能有未加引号的逗号）`);
+        allRows.slice(1).forEach((c,i) => {
+          const cells = c.map(v => String(v===null||v===undefined?'':v).trim());
+          if(!cells.join('').trim()) return;
+          if(expectedCols && cells.length < expectedCols){
+            parseErrors.push(`第${i+2}行: 期望 ${expectedCols} 列，实际 ${cells.length} 列`);
           }
-          rows.push(c);
+          rows.push(cells);
         });
         if(!rows.length){ alert('没有有效数据行，文件可能只有表头'); return; }
         const errHtml = parseErrors.length ? `<div style="color:var(--risk);font-size:11px;background:#fff1f2;border-radius:6px;padding:8px 10px;margin-bottom:8px;max-height:80px;overflow:auto;"><strong>⚠ ${parseErrors.length} 行列数不符（仍可尝试导入，不符行将被跳过）：</strong><br>${parseErrors.slice(0,5).map(s=>'· '+s).join('<br>')}${parseErrors.length>5?'<br>…等':''}` + '</div>' : '';
-        $('#modalGenericTitle').textContent = config.title || 'CSV导入';
-        $('#modalGenericSub').textContent = config.sub || 'CSV IMPORT';
+        $('#modalGenericTitle').textContent = config.title || '数据导入';
+        $('#modalGenericSub').textContent = config.sub || 'IMPORT';
         $('#modalGenericBody').innerHTML = `
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">📄 ${file.name} · ${isExcel?'Excel':'CSV'} · ${rows.length} 行数据，${headers.length} 列（追加，不覆盖现有）</div>
           ${errHtml}
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">检测到 <strong>${rows.length}</strong> 行数据，${headers.length} 列（追加，不覆盖现有数据）</div>
           <div style="max-height:240px;overflow:auto;border:1px solid var(--line-2);border-radius:8px;">
             <table class="tbl" style="font-size:11px;"><thead><tr>${headers.slice(0,7).map(h=>'<th>'+h+'</th>').join('')}${headers.length>7?'<th>…+'+( headers.length-7)+'列</th>':''}</tr></thead><tbody>
             ${rows.slice(0,8).map(r=>'<tr>'+r.slice(0,7).map(c=>'<td>'+(c||'')+'</td>').join('')+(headers.length>7?'<td>…</td>':'')+'</tr>').join('')}
@@ -3789,7 +3791,7 @@ function csvImportFlow(config){
             try{
               const o = config.rowToObj(c, count);
               if(o){ items.push(o); count++; } else skipped++;
-            } catch(rowErr){ skipped++; console.warn('CSV第'+(i+2)+'行解析失败:', rowErr.message, c); }
+            } catch(rowErr){ skipped++; console.warn('第'+(i+2)+'行解析失败:', rowErr.message, c); }
           });
           if(config.onImport) config.onImport(items);
           Storage.save(State.data);
@@ -3799,9 +3801,29 @@ function csvImportFlow(config){
           if(config.after) config.after();
         };
         openModal('modalGeneric');
-      } catch(err){ alert('CSV解析失败: '+err.message+'\n请检查文件编码（需UTF-8）和格式'); }
+      } catch(err){ alert('文件解析失败: '+err.message); }
     };
-    reader.readAsText(file, 'UTF-8');
+
+    if(isExcel){
+      if(!window.XLSX){ alert('Excel解析库加载中，请稍后重试'); return; }
+      const reader = new FileReader();
+      reader.onload = e => {
+        try{
+          const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const allRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+          processRows(allRows);
+        } catch(err){ alert('Excel解析失败: '+err.message); }
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const lines = e.target.result.replace(/^﻿/,'').split(/\r?\n/).filter(l=>l.trim());
+        processRows(lines.map(parseCSVLine));
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
   };
   input.click();
 }
@@ -4089,6 +4111,13 @@ function seedBudget(){
       { name:'数字媒介投放', budget:2540000, used:980000, monthPlan:320000 },
       { name:'视觉物料制作', budget:1905000, used:760000, monthPlan:180000 },
       { name:'工具/软件/授权', budget:635000, used:210000, monthPlan:52000 }
+    ],
+    monthlyBudget: [
+      { name:'KOL/达人合作',   m1:350000,m2:350000,m3:350000,m4:380000,m5:380000,m6:400000,m7:370000,m8:360000,m9:380000,m10:390000,m11:390000,m12:345000 },
+      { name:'线下活动/展会',  m1:200000,m2:200000,m3:250000,m4:280000,m5:280000,m6:300000,m7:250000,m8:200000,m9:300000,m10:250000,m11:250000,m12:215000 },
+      { name:'数字媒介投放',   m1:180000,m2:180000,m3:200000,m4:220000,m5:220000,m6:250000,m7:210000,m8:200000,m9:220000,m10:230000,m11:230000,m12:200000 },
+      { name:'视觉物料制作',   m1:140000,m2:140000,m3:160000,m4:170000,m5:170000,m6:170000,m7:150000,m8:140000,m9:160000,m10:160000,m11:160000,m12:145000 },
+      { name:'工具/软件/授权', m1:50000,m2:50000,m3:55000,m4:55000,m5:55000,m6:55000,m7:52000,m8:52000,m9:55000,m10:54000,m11:52000,m12:50000 }
     ],
     expenses: [
       { id:'EX001', date:'2026-04-08', project:'Q2品牌声量', category:'KOL/达人合作', amount:280000, campaign:'春季新品', vendor:'洋葱MCN', status:'已结算', notes:'头部达人×2，腰部×5' },
@@ -4780,24 +4809,28 @@ function lockBudget(){ State.budgetUnlocked = false; renderBudget(); }
 
 function renderBudget(){
   if(!State.data.budgetData) State.data.budgetData = seedBudget();
+  if(!State.data.budgetData.monthlyBudget) State.data.budgetData.monthlyBudget = seedBudget().monthlyBudget;
   if(State.data.budgetPassword === undefined) State.data.budgetPassword = '888888';
   if(!State.budgetUnlocked){ return renderBudgetLock(); }
   State.budgetTab = State.budgetTab || 'overview';
 
   const tabs = [
     { key:'overview', label:'总览' },
+    { key:'annualPlan', label:'年度预算' },
     { key:'details', label:'费用明细' },
     { key:'trends', label:'消耗趋势' }
-  ].map(t => `<div class="sub-tab${State.budgetTab===t.key?' active':''}" onclick="State.budgetTab='${t.key}';renderBudget()">${t.label}</div>`).join('');
+  ].map(t => `<div class="sub-tab${State.budgetTab===t.key?' active':''}" onclick="State.budgetTab='${t.key}';State.budgetTrendSub=null;renderBudget()">${t.label}</div>`).join('');
 
   const bd = State.data.budgetData;
   const totalUsed = bd.categories.reduce((s,c)=>s+c.used,0);
   const totalPlan = bd.categories.reduce((s,c)=>s+c.monthPlan,0);
   const usedRate = Math.round(totalUsed/bd.annual*100);
   const fmt = n => n>=10000 ? (n/10000).toFixed(1)+'万' : n.toLocaleString();
+  const fmtN = n => n ? (n/10000).toFixed(1) : '0';
 
   let body = '';
 
+  /* ── 总览 ── */
   if(State.budgetTab === 'overview'){
     const warnStyle = usedRate > 80 ? 'color:var(--risk);' : '';
     const stats = `<div class="grid grid-4" style="margin-bottom:24px;">
@@ -4806,110 +4839,220 @@ function renderBudget(){
       <div class="stat${usedRate>80?' risk':''}"><div class="stat-deco"></div><div class="stat-label">使用率</div><div class="stat-value" style="${warnStyle}">${usedRate}%</div><div class="stat-foot">${usedRate>80?'⚠ 超过80%预警':''}</div></div>
       <div class="stat warn"><div class="stat-deco"></div><div class="stat-label">本月计划</div><div class="stat-value">${fmt(totalPlan)}</div><div class="stat-foot">元</div></div>
     </div>`;
-
     const catRows = bd.categories.map(c => {
       const rate = Math.round(c.used/c.budget*100);
       const barColor = rate > 80 ? 'var(--risk)' : rate > 60 ? 'var(--frog-yellow)' : 'var(--frog-mint)';
-      return `<tr>
-        <td>${c.name}</td>
-        <td style="text-align:right;">${fmt(c.budget)}</td>
-        <td style="text-align:right;">${fmt(c.used)}</td>
-        <td style="width:140px;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="flex:1;background:var(--line-2);border-radius:3px;height:6px;overflow:hidden;">
-              <div style="width:${rate}%;height:100%;background:${barColor};border-radius:3px;"></div>
-            </div>
-            <span style="font-size:12px;font-weight:600;min-width:34px;${rate>80?'color:var(--risk)':''}">${rate}%</span>
-          </div>
-        </td>
-        <td style="text-align:right;">${fmt(c.monthPlan)}</td>
-      </tr>`;
+      return `<tr><td>${c.name}</td><td style="text-align:right;">${fmt(c.budget)}</td><td style="text-align:right;">${fmt(c.used)}</td>
+        <td style="width:140px;"><div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;background:var(--line-2);border-radius:3px;height:6px;overflow:hidden;"><div style="width:${Math.min(rate,100)}%;height:100%;background:${barColor};border-radius:3px;"></div></div>
+          <span style="font-size:12px;font-weight:600;min-width:34px;${rate>80?'color:var(--risk)':''}">${rate}%</span>
+        </div></td>
+        <td style="text-align:right;">${fmt(c.monthPlan)}</td></tr>`;
     }).join('');
-
     body = stats + `<div class="grid grid-2" style="gap:20px;">
       <div class="card elevated">
         <div class="card-title" style="margin-bottom:12px;">预算分类执行</div>
-        <table class="tbl" style="width:100%;">
-          <thead><tr><th>类别</th><th style="text-align:right;">预算</th><th style="text-align:right;">已用</th><th>进度</th><th style="text-align:right;">本月计划</th></tr></thead>
-          <tbody>${catRows}</tbody>
-        </table>
+        <table class="tbl" style="width:100%;"><thead><tr><th>类别</th><th style="text-align:right;">预算</th><th style="text-align:right;">已用</th><th>进度</th><th style="text-align:right;">本月计划</th></tr></thead><tbody>${catRows}</tbody></table>
       </div>
       <div class="card elevated">
-        <div class="card-title" style="margin-bottom:12px;">预算分配</div>
+        <div class="card-title" style="margin-bottom:12px;">预算分配（饼图）</div>
         <div style="position:relative;height:260px;"><canvas id="budgetPieChart"></canvas></div>
       </div>
     </div>`;
-
     setTimeout(()=>{
-      disposeChart('budgetPieChart');
-      if(!window.Chart) return;
-      const ctx = document.getElementById('budgetPieChart');
-      if(!ctx) return;
-      new Chart(ctx, {
-        type:'doughnut',
-        data:{
-          labels: bd.categories.map(c=>c.name),
-          datasets:[{ data: bd.categories.map(c=>c.budget),
-            backgroundColor:['#5BA8D6','#7FCEAB','#F5C842','#A8D4E8','#C5E8D6'],
-            borderWidth:2, borderColor:'#fff' }]
-        },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:12 } } } }
-      });
+      disposeChart('budgetPieChart'); if(!window.Chart) return;
+      const ctx = document.getElementById('budgetPieChart'); if(!ctx) return;
+      new Chart(ctx,{ type:'doughnut', data:{ labels:bd.categories.map(c=>c.name), datasets:[{ data:bd.categories.map(c=>c.budget), backgroundColor:['#5BA8D6','#7FCEAB','#F5C842','#A8D4E8','#C5E8D6'], borderWidth:2, borderColor:'#fff' }] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{size:12}, padding:12 } } } } });
     }, 80);
 
+  /* ── 年度预算（科目×月份矩阵，可编辑） ── */
+  } else if(State.budgetTab === 'annualPlan'){
+    const mb = bd.monthlyBudget || [];
+    const mkeys = ['m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12'];
+    const mLabels = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    const qRanges = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
+
+    const headerCols = `<th style="min-width:110px;">科目</th>` +
+      qRanges.map((q,qi) => q.map(m=>`<th style="text-align:right;min-width:78px;">${mLabels[m]}</th>`).join('') + `<th style="text-align:right;min-width:72px;background:rgba(91,168,214,0.08);font-weight:700;">Q${qi+1}合计</th>`).join('') +
+      `<th style="text-align:right;min-width:80px;background:rgba(91,168,214,0.15);font-weight:700;">年度合计</th>`;
+
+    const totalRow = {};
+    mkeys.forEach(k => { totalRow[k] = mb.reduce((s,r)=>s+(r[k]||0),0); });
+    const qTotal = q => q.reduce((s,m)=>s+totalRow[mkeys[m]],0);
+    const annualTotal = mkeys.reduce((s,k)=>s+totalRow[k],0);
+
+    const dataRows = mb.map((row,ri) => {
+      const qSums = qRanges.map(q=>q.reduce((s,m)=>s+(row[mkeys[m]]||0),0));
+      const annual = mkeys.reduce((s,k)=>s+(row[k]||0),0);
+      const cells = qRanges.map((q,qi)=>
+        q.map(m=>`<td style="text-align:right;"><input type="number" class="inline-num" value="${row[mkeys[m]]||0}" onchange="updateMonthlyBudget(${ri},'${mkeys[m]}',this.value)" style="width:72px;border:1px solid var(--line-2);border-radius:4px;padding:2px 4px;font-size:12px;text-align:right;background:transparent;"></td>`).join('') +
+        `<td style="text-align:right;font-weight:700;background:rgba(91,168,214,0.06);">${fmtN(qSums[qi])}万</td>`
+      ).join('');
+      return `<tr><td style="font-weight:600;">${row.name}</td>${cells}<td style="text-align:right;font-weight:700;background:rgba(91,168,214,0.12);">${fmtN(annual)}万</td></tr>`;
+    }).join('');
+
+    const totalCells = qRanges.map((q,qi)=>
+      q.map(m=>`<td style="text-align:right;font-weight:600;background:var(--surface-2);">${fmtN(totalRow[mkeys[m]])}万</td>`).join('') +
+      `<td style="text-align:right;font-weight:700;background:rgba(91,168,214,0.1);">${fmtN(qTotal(q))}万</td>`
+    ).join('') + `<td style="text-align:right;font-weight:700;background:rgba(91,168,214,0.18);">${fmtN(annualTotal)}万</td>`;
+
+    body = `<div class="card elevated">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div class="card-title">年度预算规划（按科目×月份，单位：元，可直接编辑）</div>
+        <button class="btn ghost sm" onclick="addBudgetCategory()">+ 新增科目</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl" style="width:100%;font-size:12px;">
+          <thead><tr>${headerCols}</tr></thead>
+          <tbody>${dataRows}
+          <tr style="font-weight:700;background:var(--surface-2);">
+            <td>合计</td>${totalCells}
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">💡 点击单元格内数字直接修改，自动计算季度及年度合计</div>
+    </div>`;
+
+  /* ── 费用明细（月度汇总矩阵 + 明细列表） ── */
   } else if(State.budgetTab === 'details'){
-    const exRows = bd.expenses.map(e => {
+    const exps = bd.expenses || [];
+    const cats = bd.categories.map(c=>c.name);
+    const months = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const mLabels = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    // build month×cat matrix from expenses
+    const matrix = {}; // matrix[cat][month] = sum
+    cats.forEach(c=>{ matrix[c]={}; months.forEach(m=>{ matrix[c][m]=0; }); });
+    exps.forEach(e => {
+      const m = (e.date||'').slice(5,7);
+      if(matrix[e.category] && months.includes(m)) matrix[e.category][m] += (e.amount||0);
+    });
+    const catTotals = cats.map(c => months.reduce((s,m)=>s+(matrix[c][m]||0),0));
+    const monthTotals = months.map(m => cats.reduce((s,c)=>s+(matrix[c][m]||0),0));
+    const grandTotal = catTotals.reduce((s,v)=>s+v,0);
+
+    const qRanges = [[0,1,2],[3,4,5],[6,7,8],[9,10,11]];
+    const matrixHdr = `<th>科目</th>` + qRanges.map((q,qi)=>
+      q.map(mi=>`<th style="text-align:right;font-size:11px;">${mLabels[mi]}</th>`).join('') +
+      `<th style="text-align:right;background:rgba(91,168,214,0.08);font-size:11px;">Q${qi+1}</th>`
+    ).join('') + `<th style="text-align:right;background:rgba(91,168,214,0.15);">合计</th>`;
+
+    const matrixRows = cats.map((c,ci) => {
+      const qSums = qRanges.map(q=>q.reduce((s,mi)=>s+(matrix[c][months[mi]]||0),0));
+      const cells = qRanges.map((q,qi)=>
+        q.map(mi=>`<td style="text-align:right;">${matrix[c][months[mi]]?fmtN(matrix[c][months[mi]])+'万':'-'}</td>`).join('') +
+        `<td style="text-align:right;font-weight:600;background:rgba(91,168,214,0.06);">${qSums[qi]?fmtN(qSums[qi])+'万':'-'}</td>`
+      ).join('');
+      return `<tr><td style="font-weight:600;">${c}</td>${cells}<td style="text-align:right;font-weight:700;background:rgba(91,168,214,0.1);">${catTotals[ci]?fmtN(catTotals[ci])+'万':'-'}</td></tr>`;
+    }).join('');
+    const totalQSums = qRanges.map(q=>q.reduce((s,mi)=>s+(monthTotals[mi]||0),0));
+    const totalRowCells = qRanges.map((q,qi)=>
+      q.map(mi=>`<td style="text-align:right;font-weight:600;background:var(--surface-2);">${monthTotals[mi]?fmtN(monthTotals[mi])+'万':'-'}</td>`).join('') +
+      `<td style="text-align:right;font-weight:700;background:rgba(91,168,214,0.1);">${fmtN(totalQSums[qi])}万</td>`
+    ).join('') + `<td style="text-align:right;font-weight:700;background:rgba(91,168,214,0.18);">${fmtN(grandTotal)}万</td>`;
+
+    const exRows = exps.map(e => {
       const stPill = e.status==='已结算' ? 'green' : e.status==='进行中' ? 'blue' : 'yellow';
       return `<tr>
-        <td>${e.date}</td>
-        <td>${e.project}</td>
-        <td>${e.category}</td>
-        <td>${e.campaign}</td>
-        <td>${e.vendor}</td>
+        <td>${e.date}</td><td>${e.project}</td><td>${e.category}</td><td>${e.campaign||''}</td><td>${e.vendor||''}</td>
         <td style="text-align:right;font-weight:600;">${fmt(e.amount)}</td>
         <td><span class="pill ${stPill}">${e.status}</span></td>
-        <td>
-          <button class="btn-sm ghost" onclick="editExpense('${e.id}')">编辑</button>
-          <button class="btn-sm ghost" style="color:var(--risk);" onclick="deleteExpense('${e.id}')">删除</button>
-        </td>
+        <td><button class="btn-sm ghost" onclick="editExpense('${e.id}')">编辑</button> <button class="btn-sm ghost" style="color:var(--risk);" onclick="deleteExpense('${e.id}')">删除</button></td>
       </tr>`;
     }).join('');
 
-    body = `<div class="card elevated">
+    body = `<div class="card elevated" style="margin-bottom:20px;">
+      <div class="card-title" style="margin-bottom:12px;">月度费用汇总（按科目×月份，万元）</div>
+      <div style="overflow-x:auto;">
+        <table class="tbl" style="width:100%;font-size:12px;">
+          <thead><tr>${matrixHdr}</tr></thead>
+          <tbody>${matrixRows}<tr style="font-weight:700;background:var(--surface-2);"><td>合计</td>${totalRowCells}</tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card elevated">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <div class="card-title">费用明细</div>
+        <div class="card-title">费用明细清单</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn ghost" onclick="importBudgetCSV()">导入CSV</button>
+          <button class="btn ghost" onclick="importBudgetCSV()">📤 导入 Excel/CSV</button>
           <button class="btn" onclick="addExpense()">+ 新增费用</button>
         </div>
       </div>
       <div style="overflow-x:auto;">
         <table class="tbl" style="width:100%;min-width:820px;">
           <thead><tr><th>日期</th><th>项目</th><th>类别</th><th>Campaign</th><th>供应商</th><th style="text-align:right;">金额</th><th>状态</th><th>操作</th></tr></thead>
-          <tbody>${exRows}</tbody>
+          <tbody>${exRows||'<tr><td colspan="8" style="color:var(--muted);text-align:center;">暂无费用记录</td></tr>'}</tbody>
         </table>
       </div>
     </div>`;
 
+  /* ── 消耗趋势 ── */
   } else if(State.budgetTab === 'trends'){
-    body = `<div class="card elevated">
-      <div class="card-title" style="margin-bottom:16px;">月度预算消耗趋势</div>
-      <div style="position:relative;height:340px;"><canvas id="budgetTrendChart"></canvas></div>
-    </div>`;
+    State.budgetTrendSub = State.budgetTrendSub || 'monthly';
+    const trendTabs = [
+      {key:'monthly', label:'月度预算消耗'},
+      {key:'bycat', label:'分科目预算消耗'}
+    ].map(t=>`<div class="sub-tab${State.budgetTrendSub===t.key?' active':''}" style="font-size:12px;padding:6px 14px;" onclick="State.budgetTrendSub='${t.key}';renderBudget()">${t.label}</div>`).join('');
 
-    setTimeout(()=>{
-      disposeChart('budgetTrendChart');
-      if(!window.Chart) return;
-      const ctx = document.getElementById('budgetTrendChart');
-      if(!ctx) return;
+    if(State.budgetTrendSub === 'monthly'){
+      // Compute monthly plan from monthlyBudget, actual from expenses
+      const mb = bd.monthlyBudget || [];
+      const mkeys = ['m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12'];
+      const planData = mkeys.map(k => mb.reduce((s,r)=>s+(r[k]||0),0));
+      const exps = bd.expenses || [];
+      const actualData = Array(12).fill(0);
+      exps.forEach(e => {
+        const m = parseInt((e.date||'').slice(5,7),10)-1;
+        if(m>=0&&m<12) actualData[m] += (e.amount||0);
+      });
       const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-      const planData = [880000,760000,820000,950000,1200000,1580000,1020000,880000,920000,1100000,1380000,1210000];
-      const actualData = [860000,710000,795000,920000,1150000,null,null,null,null,null,null,null];
-      lineChart('budgetTrendChart', months, [
-        { label:'计划消耗', data:planData, borderColor:'#5BA8D6', backgroundColor:'rgba(91,168,214,0.08)', borderDash:[5,4], tension:0.35, fill:false },
-        { label:'实际消耗', data:actualData, borderColor:'#7FCEAB', backgroundColor:'rgba(127,206,171,0.12)', tension:0.35, fill:true }
-      ], { responsive:true, maintainAspectRatio:false });
-    }, 80);
+      const actualFiltered = actualData.map(v => v > 0 ? v : null);
+      body = `<div class="card elevated">
+        <div style="display:flex;gap:8px;margin-bottom:16px;">${trendTabs}</div>
+        <div class="card-title" style="margin-bottom:12px;">月度预算消耗 vs 计划</div>
+        <div style="position:relative;height:340px;"><canvas id="budgetTrendChart"></canvas></div>
+      </div>`;
+      setTimeout(()=>{
+        disposeChart('budgetTrendChart'); if(!window.Chart) return;
+        const ctx = document.getElementById('budgetTrendChart'); if(!ctx) return;
+        lineChart('budgetTrendChart', months, [
+          { label:'计划消耗', data:planData, borderColor:'#5BA8D6', backgroundColor:'rgba(91,168,214,0.08)', borderDash:[5,4], tension:0.35, fill:false },
+          { label:'实际消耗', data:actualFiltered, borderColor:'#7FCEAB', backgroundColor:'rgba(127,206,171,0.12)', tension:0.35, fill:true }
+        ], { responsive:true, maintainAspectRatio:false });
+      }, 80);
+    } else {
+      // By category: budget vs used bar chart
+      body = `<div class="card elevated">
+        <div style="display:flex;gap:8px;margin-bottom:16px;">${trendTabs}</div>
+        <div class="card-title" style="margin-bottom:12px;">分科目预算消耗对比</div>
+        <div style="position:relative;height:340px;"><canvas id="budgetCatChart"></canvas></div>
+        <div style="margin-top:20px;">
+        ${bd.categories.map(c=>{
+          const rate=Math.min(Math.round(c.used/c.budget*100),100);
+          const bc=rate>80?'var(--risk)':rate>60?'var(--frog-yellow)':'var(--frog-mint)';
+          return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="width:120px;font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.name}</div>
+            <div style="flex:1;background:var(--line-2);border-radius:4px;height:8px;overflow:hidden;"><div style="width:${rate}%;height:100%;background:${bc};border-radius:4px;"></div></div>
+            <div style="font-size:12px;min-width:100px;text-align:right;color:var(--muted);">${fmtN(c.used)}万 / ${fmtN(c.budget)}万</div>
+            <div style="font-size:12px;font-weight:700;min-width:36px;text-align:right;${rate>80?'color:var(--risk)':''}">${rate}%</div>
+          </div>`;
+        }).join('')}
+        </div>
+      </div>`;
+      setTimeout(()=>{
+        disposeChart('budgetCatChart'); if(!window.Chart) return;
+        const ctx = document.getElementById('budgetCatChart'); if(!ctx) return;
+        new Chart(ctx, { type:'bar',
+          data:{ labels:bd.categories.map(c=>c.name),
+            datasets:[
+              { label:'年度预算', data:bd.categories.map(c=>c.budget/10000), backgroundColor:'rgba(91,168,214,0.5)', borderColor:'#5BA8D6', borderWidth:1 },
+              { label:'已消耗', data:bd.categories.map(c=>c.used/10000), backgroundColor:'rgba(127,206,171,0.7)', borderColor:'#7FCEAB', borderWidth:1 }
+            ]},
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top' } },
+            scales:{ y:{ ticks:{ callback: v=>v+'万' } } } }
+        });
+      }, 80);
+    }
   }
 
   const html = `
@@ -4922,6 +5065,25 @@ function renderBudget(){
     ${body}
   `;
   $('#main').innerHTML = `<section class="section active">${html}</section>`;
+}
+
+function updateMonthlyBudget(rowIdx, mkey, val){
+  const mb = State.data.budgetData.monthlyBudget;
+  if(!mb||!mb[rowIdx]) return;
+  mb[rowIdx][mkey] = Number(val)||0;
+  Storage.save(State.data);
+}
+
+function addBudgetCategory(){
+  const name = prompt('新科目名称');
+  if(!name||!name.trim()) return;
+  const n = name.trim();
+  State.data.budgetData.categories.push({ name:n, budget:0, used:0, monthPlan:0 });
+  const mRow = { name:n };
+  ['m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12'].forEach(k=>mRow[k]=0);
+  State.data.budgetData.monthlyBudget.push(mRow);
+  Storage.save(State.data);
+  renderBudget();
 }
 
 function addExpense(){
@@ -5035,30 +5197,18 @@ function deleteExpense(id){
 }
 
 function importBudgetCSV(){
-  const input = document.createElement('input');
-  input.type = 'file'; input.accept = '.csv';
-  input.onchange = e => {
-    const file = e.target.files[0]; if(!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const lines = ev.target.result.split('\n').filter(l=>l.trim());
-      let added = 0;
-      lines.slice(1).forEach(line => {
-        const cols = line.split(',').map(s=>s.trim().replace(/^"|"$/g,''));
-        if(cols.length < 6) return;
-        const amount = Number(cols[5])||0;
-        State.data.budgetData.expenses.push({ id:'EX'+Date.now()+Math.random(), date:cols[0], project:cols[1], category:cols[2], campaign:cols[3], vendor:cols[4], amount, status:cols[6]||'待付款', notes:cols[7]||'' });
-        const cat = State.data.budgetData.categories.find(c=>c.name===cols[2]);
-        if(cat) cat.used += amount;
-        added++;
-      });
-      Storage.save(State.data);
-      alert(`已导入 ${added} 条费用记录`);
-      renderBudget();
-    };
-    reader.readAsText(file);
-  };
-  input.click();
+  csvImportFlow({
+    title:'导入费用明细', sub:'日期,项目,类别,Campaign,供应商,金额,状态,备注',
+    rowToObj: c => {
+      if(!c[0]||!c[5]) return null;
+      const amount = Number(c[5])||0;
+      const cat = State.data.budgetData.categories.find(x=>x.name===c[2]);
+      if(cat) cat.used += amount;
+      return { id:'EX'+Date.now()+Math.random(), date:c[0], project:c[1]||'', category:c[2]||'', campaign:c[3]||'', vendor:c[4]||'', amount, status:c[6]||'待付款', notes:c[7]||'' };
+    },
+    onImport: items => { State.data.budgetData.expenses.push(...items); },
+    after: renderBudget
+  });
 }
 
 /* ============================================================
