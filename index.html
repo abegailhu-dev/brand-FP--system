@@ -2886,11 +2886,46 @@ function empDevPathHTML(e){
   const top = gaps.filter(g=>g.gap>0).slice(0,2);
   const overall = avgPosition(e);
   const curLevel = overall>=9?'L4':overall>=8?'L3':overall>=7?'L2':'L1';
+
+  // Performance trend from monthlyPerf history
+  const mp = e.monthlyPerf || {};
+  const mpKeys = Object.keys(mp).sort();
+  let trendHtml = '';
+  if(mpKeys.length >= 2){
+    const scores = mpKeys.map(k=>mp[k]);
+    const recent3 = scores.slice(-3);
+    const older3 = scores.slice(-6,-3);
+    const recentAvg = recent3.reduce((a,b)=>a+b,0)/recent3.length;
+    const olderAvg = older3.length ? older3.reduce((a,b)=>a+b,0)/older3.length : null;
+    const trendDir = olderAvg===null ? null : recentAvg - olderAvg;
+    const trendLabel = trendDir===null ? '' : trendDir>=0.3 ? '↑ 持续提升' : trendDir<=-0.3 ? '↓ 需关注下滑' : '→ 基本稳定';
+    const trendColor = trendDir===null ? '' : trendDir>=0.3 ? 'var(--frog-mint)' : trendDir<=-0.3 ? 'var(--risk)' : 'var(--muted)';
+    const sparkLine = scores.slice(-6).map((s,i,arr)=>{
+      const minS=Math.min(...arr), maxS=Math.max(...arr), range=maxS-minS||1;
+      const y = 20 - Math.round(((s-minS)/range)*16);
+      return i===0?`M0,${y}`:`L${i*10},${y}`;
+    }).join(' ');
+    const lastPeriod = mpKeys.slice(-1)[0];
+    trendHtml = `<div style="display:flex;align-items:center;gap:10px;margin:8px 0 4px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--muted);">近期绩效 <strong>${recentAvg.toFixed(1)}</strong> (${lastPeriod})</span>
+      ${trendLabel?`<span style="font-size:11px;font-weight:600;color:${trendColor};">${trendLabel}</span>`:''}
+      ${scores.length>=2?`<svg width="${(Math.min(scores.length,6)-1)*10}" height="24" style="vertical-align:middle;opacity:0.7"><path d="${sparkLine}" fill="none" stroke="${trendColor||'var(--muted)'}" stroke-width="1.5" stroke-linejoin="round"/></svg>`:''}
+      <span style="font-size:10px;color:var(--muted);">共${mpKeys.length}期记录</span>
+    </div>`;
+  } else if(mpKeys.length===1){
+    trendHtml = `<div style="font-size:11px;color:var(--muted);margin:6px 0;">绩效记录: ${mpKeys[0]} · ${mp[mpKeys[0]].toFixed(1)}分（积累更多期数可显示趋势）</div>`;
+  }
+
+  // Year 1 focus: top gaps, estimated months to close
+  const gapMonths = top.length ? top.map(g=>`${g.d}（差${g.gap.toFixed(1)}分，≈${Math.ceil(g.gap/0.5*2)}个月）`).join(' + ') : '全维度均衡提升';
+  const y2Focus = gaps.filter(g=>g.gap>0).slice(2,4).map(g=>g.d).join('、') || '横向扩展影响力';
+
   return `<div style="margin-top:16px;border-top:1px dashed var(--line-2);padding-top:14px;">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2px;">发展路径</span><span class="level-badge ${curLevel}">${curLevel}</span><span style="color:var(--muted);">→</span><span class="level-badge ${t.level}">${t.level}</span><span style="font-size:11px;color:var(--muted);">${top.length?'核心短板：'+top.map(g=>g.d).join('、'):'各维度已达标，进入强化期'}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;"><span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:2px;">发展路径</span><span class="level-badge ${curLevel}">${curLevel}</span><span style="color:var(--muted);">→</span><span class="level-badge ${t.level}">${t.level}</span><span style="font-size:11px;color:var(--muted);">${top.length?'核心短板：'+top.map(g=>g.d).join('、'):'各维度已达标，进入强化期'}</span></div>
+    ${trendHtml}
     <div class="roadmap">
-      <div class="roadmap-stage"><div class="roadmap-year">YEAR 01 · 补齐</div><div class="roadmap-title">补齐核心短板</div><div class="roadmap-content">聚焦 <strong>${top.length?top.map(g=>g.d).join(' + '):'全维度'}</strong>，达到岗位目标80%。</div></div>
-      <div class="roadmap-stage y2"><div class="roadmap-year">YEAR 02 · 强化</div><div class="roadmap-title">强化岗位核心</div><div class="roadmap-content">全维度逼近岗位目标，开始横向影响。</div></div>
+      <div class="roadmap-stage"><div class="roadmap-year">YEAR 01 · 补齐</div><div class="roadmap-title">补齐核心短板</div><div class="roadmap-content">聚焦 <strong>${gapMonths}</strong>，达到岗位目标80%。</div></div>
+      <div class="roadmap-stage y2"><div class="roadmap-year">YEAR 02 · 强化</div><div class="roadmap-title">强化岗位核心</div><div class="roadmap-content">强化 <strong>${y2Focus}</strong>，全维度逼近岗位目标，开始横向影响。</div></div>
       <div class="roadmap-stage y3"><div class="roadmap-year">YEAR 03 · 突破</div><div class="roadmap-title">向上突破</div><div class="roadmap-content">达到 <strong>${t.level}</strong> 标杆，定义方法论，培养下一代。</div></div>
     </div>
   </div>`;
@@ -3273,39 +3308,63 @@ function talentManageHTML(){
 }
 
 function downloadTalentTemplate(){
-  // 列顺序必须与导入解析一致: 基本信息6列 + 个人7维 + 岗位7维 (分数1-10)
-  const header = ['ID','姓名','岗位','小组','状态','入岗年限',
+  // 列: ID,姓名,岗位,小组,状态,入岗年限,评估年份,评估周期(年/Q1-Q4/YYYY-MM),个人7维,岗位7维
+  const header = ['ID','姓名','岗位','小组','状态','入岗年限','评估年份','评估周期',
     ...PERSONAL_DIMS, ...POSITION_DIMS].join(',');
-  const sample = 'EMP099,张三,品牌文案策划,策略与内容组,在岗,2,8,7,8,7,8,7,7,8,7,8,7,8,7,8';
-  const csv = header + '\n' + sample;
+  const yr = new Date().getFullYear();
+  const sample = `EMP099,张三,品牌文案策划,策略与内容组,在岗,2,${yr},Q2,8,7,8,7,8,7,7,8,7,8,7,8,7,8`;
+  const note = `# 评估周期填写说明: 年度填"年度", 季度填"Q1/Q2/Q3/Q4", 月度填"YYYY-MM" 如 ${yr}-06`;
+  const csv = note + '\n' + header + '\n' + sample;
   const blob = new Blob(['﻿'+csv],{type:'text/csv'});
   const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='人才数据模板.csv'; a.click();
 }
 
 function importTalentCsv(){
-  const P = PERSONAL_DIMS, Q = POSITION_DIMS; // 7 + 7 维度(中文键名)
+  const P = PERSONAL_DIMS, Q = POSITION_DIMS;
+  // 列: 0=ID 1=姓名 2=岗位 3=小组 4=状态 5=入岗年限 6=评估年份 7=评估周期 8~14=个人7维 15~21=岗位7维
+  // 兼容旧格式(无年份/周期列): 若第6列不像年份(4位数字)则按旧格式偏移6解析
   csvImportFlow({
     title:'导入员工数据', sub:'TALENT CSV IMPORT',
+    expectedCols: 22,
     rowToObj(c,i){
-      if(c.length<2||!c[1] || !c[1].trim()) return null;
+      if(c.length<2||!c[1]||!c[1].trim()) return null;
+      // 跳过注释行
+      if(c[0].trim().startsWith('#')) return null;
       const num = (v, def) => { const n = parseFloat(v); return isNaN(n) ? def : n; };
       const personal = {}, position_scores = {};
-      // 列: 0=ID 1=姓名 2=岗位 3=小组 4=状态 5=入岗年限 6~12=个人7维 13~19=岗位7维
-      P.forEach((d,k)=> personal[d] = num(c[6+k], 7));
-      Q.forEach((d,k)=> position_scores[d] = num(c[13+k], 7));
-      return {
+      const hasTimeCols = c.length >= 22 && /^\d{4}$/.test((c[6]||'').trim());
+      const offset = hasTimeCols ? 8 : 6;
+      const evalYear = hasTimeCols ? (c[6]||'').trim() : '';
+      const evalPeriod = hasTimeCols ? (c[7]||'').trim() : '';
+      P.forEach((d,k)=> personal[d] = num(c[offset+k], 7));
+      Q.forEach((d,k)=> position_scores[d] = num(c[offset+7+k], 7));
+      const emp = {
         id:(c[0]||'').trim()||'EMP'+Date.now()+i,
         name:c[1].trim(), position:(c[2]||'').trim(), group:(c[3]||'').trim()||'/',
         status:(c[4]||'在岗').trim(), yearsInRole:num(c[5],1),
         personal, position_scores,
         joinDate:'', notes:'', lastReview:''
       };
+      // 若有月度周期(YYYY-MM)，同步写入 monthlyPerf
+      if(evalPeriod && /^\d{4}-\d{2}$/.test(evalPeriod)){
+        const avgScore = +((P.map(d=>personal[d]).reduce((a,b)=>a+b,0)/P.length).toFixed(2));
+        emp._importMonthlyPerf = { key: evalPeriod, score: avgScore };
+      }
+      emp._evalMeta = evalYear ? { year: evalYear, period: evalPeriod } : null;
+      return emp;
     },
     onImport(items){
       items.forEach(emp=>{
+        const mp = emp._importMonthlyPerf; delete emp._importMonthlyPerf;
+        delete emp._evalMeta;
         const existing = State.data.employees.findIndex(e=>e.id===emp.id);
-        if(existing>=0) State.data.employees[existing]={...State.data.employees[existing],...emp};
-        else State.data.employees.push(emp);
+        if(existing>=0){
+          State.data.employees[existing]={...State.data.employees[existing],...emp};
+          if(mp){ if(!State.data.employees[existing].monthlyPerf) State.data.employees[existing].monthlyPerf={}; State.data.employees[existing].monthlyPerf[mp.key]=mp.score; }
+        } else {
+          if(mp){ if(!emp.monthlyPerf) emp.monthlyPerf={}; emp.monthlyPerf[mp.key]=mp.score; }
+          State.data.employees.push(emp);
+        }
       });
       Storage.save(State.data);
     },
@@ -3411,8 +3470,10 @@ function renderDataManage(){
 function downloadCSVTemplate(type){
   let csv = '';
   if(type === 'employees'){
-    csv = 'ID,姓名,岗位,小组,入职日期,在岗年限,状态,' + PERSONAL_DIMS.join(',') + ',' + POSITION_DIMS.join(',') + ',备注\n';
-    csv += 'E001,示例,品牌经理,/,2022-01-01,3,在岗,8,8,7,7,8,8,8,8,8,8,7,7,8,8,示例备注\n';
+    const yr2 = new Date().getFullYear();
+    csv = '# 评估周期: 年度="年度" 季度="Q1/Q2/Q3/Q4" 月度="YYYY-MM"\n';
+    csv += 'ID,姓名,岗位,小组,入职日期,在岗年限,状态,评估年份,评估周期,' + PERSONAL_DIMS.join(',') + ',' + POSITION_DIMS.join(',') + ',备注\n';
+    csv += `E001,示例,品牌经理,/,2022-01-01,3,在岗,${yr2},年度,8,8,7,7,8,8,8,8,8,8,7,7,8,8,示例备注\n`;
   } else if(type === 'tasks'){
     csv = 'ID,标题,类型,负责人,优先级,状态,周次,预估工时,项目,工作日\n';
     csv += 'T001,示例任务,文案/内容创作,刘媛卿,P2,待开始,2026-W23,4,内容日历,周一;周二\n';
@@ -3526,6 +3587,25 @@ function confirmCSVImport(type){
  *  config: { title, sub, sampleHeaders[], rowToObj(cols)->obj|null,
  *            onImport(items), after() }
  * ============================================================ */
+/* Parse a single CSV line respecting RFC-4180 quoted fields */
+function parseCSVLine(line){
+  const out = []; let cur = '', inQ = false;
+  for(let i=0;i<line.length;i++){
+    const ch = line[i];
+    if(inQ){
+      if(ch==='"' && line[i+1]==='"'){ cur+='"'; i++; }
+      else if(ch==='"'){ inQ=false; }
+      else cur+=ch;
+    } else {
+      if(ch==='"'){ inQ=true; }
+      else if(ch===','){ out.push(cur); cur=''; }
+      else cur+=ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
 function csvImportFlow(config){
   const input = document.createElement('input');
   input.type = 'file'; input.accept = '.csv';
@@ -3535,34 +3615,51 @@ function csvImportFlow(config){
     reader.onload = e => {
       try{
         const lines = e.target.result.replace(/^﻿/,'').split(/\r?\n/).filter(l=>l.trim());
-        if(lines.length < 2){ alert('CSV文件为空或仅有表头'); return; }
-        const headers = lines[0].split(',');
-        const rows = lines.slice(1).map(l=>l.split(',')).filter(c=>c.length>=1 && c.join('').trim());
-        if(!rows.length){ alert('没有有效数据行'); return; }
+        if(lines.length < 2){ alert('CSV文件为空或仅有表头，请检查文件内容'); return; }
+        const headers = parseCSVLine(lines[0]);
+        const expectedCols = config.expectedCols || null;
+        const rows = []; const parseErrors = [];
+        lines.slice(1).forEach((l,i) => {
+          const c = parseCSVLine(l);
+          if(!c.join('').trim()) return;
+          if(expectedCols && c.length < expectedCols){
+            parseErrors.push(`第${i+2}行: 期望 ${expectedCols} 列，实际 ${c.length} 列（可能有未加引号的逗号）`);
+          }
+          rows.push(c);
+        });
+        if(!rows.length){ alert('没有有效数据行，文件可能只有表头'); return; }
+        const errHtml = parseErrors.length ? `<div style="color:var(--risk);font-size:11px;background:#fff1f2;border-radius:6px;padding:8px 10px;margin-bottom:8px;max-height:80px;overflow:auto;"><strong>⚠ ${parseErrors.length} 行列数不符（仍可尝试导入，不符行将被跳过）：</strong><br>${parseErrors.slice(0,5).map(s=>'· '+s).join('<br>')}${parseErrors.length>5?'<br>…等':''}` + '</div>' : '';
         $('#modalGenericTitle').textContent = config.title || 'CSV导入';
         $('#modalGenericSub').textContent = config.sub || 'CSV IMPORT';
         $('#modalGenericBody').innerHTML = `
-          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">检测到 ${rows.length} 行数据，确认无误后导入（追加，不覆盖现有数据）</div>
+          ${errHtml}
+          <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">检测到 <strong>${rows.length}</strong> 行数据，${headers.length} 列（追加，不覆盖现有数据）</div>
           <div style="max-height:240px;overflow:auto;border:1px solid var(--line-2);border-radius:8px;">
-            <table class="tbl" style="font-size:11px;"><thead><tr>${headers.slice(0,7).map(h=>'<th>'+h+'</th>').join('')}${headers.length>7?'<th>…</th>':''}</tr></thead><tbody>
+            <table class="tbl" style="font-size:11px;"><thead><tr>${headers.slice(0,7).map(h=>'<th>'+h+'</th>').join('')}${headers.length>7?'<th>…+'+( headers.length-7)+'列</th>':''}</tr></thead><tbody>
             ${rows.slice(0,8).map(r=>'<tr>'+r.slice(0,7).map(c=>'<td>'+(c||'')+'</td>').join('')+(headers.length>7?'<td>…</td>':'')+'</tr>').join('')}
             ${rows.length>8?'<tr><td colspan="'+Math.min(headers.length,8)+'" style="color:var(--muted);">… 共 '+rows.length+' 行</td></tr>':''}
             </tbody></table>
           </div>`;
-        $('#modalGenericFoot').innerHTML = '<button class="btn ghost" onclick="closeModal(\'modalGeneric\')">取消</button><button class="btn" id="csvFlowConfirm">确认导入</button>';
+        $('#modalGenericFoot').innerHTML = '<button class="btn ghost" onclick="closeModal(\'modalGeneric\')">取消</button><button class="btn" id="csvFlowConfirm">确认导入 '+rows.length+' 条</button>';
         $('#csvFlowConfirm').onclick = () => {
-          let count = 0; const items = [];
-          rows.forEach(c => { const o = config.rowToObj(c, count); if(o){ items.push(o); count++; } });
+          let count = 0, skipped = 0; const items = [];
+          rows.forEach((c,i) => {
+            try{
+              const o = config.rowToObj(c, count);
+              if(o){ items.push(o); count++; } else skipped++;
+            } catch(rowErr){ skipped++; console.warn('CSV第'+(i+2)+'行解析失败:', rowErr.message, c); }
+          });
           if(config.onImport) config.onImport(items);
           Storage.save(State.data);
           closeModal('modalGeneric');
-          alert('成功导入 '+count+' 条数据');
+          const msg = skipped ? `成功导入 ${count} 条，跳过 ${skipped} 条（空行或格式不符）` : `成功导入 ${count} 条数据`;
+          alert(msg);
           if(config.after) config.after();
         };
         openModal('modalGeneric');
-      } catch(err){ alert('CSV解析失败: '+err.message); }
+      } catch(err){ alert('CSV解析失败: '+err.message+'\n请检查文件编码（需UTF-8）和格式'); }
     };
-    reader.readAsText(file);
+    reader.readAsText(file, 'UTF-8');
   };
   input.click();
 }
