@@ -5775,7 +5775,7 @@ function mtInjectTabBar(){
   if(State.view !== 'marketing-tracking') return;
   const sec = $('#main .section'); if(!sec) return;
   const bar = document.createElement('div');
-  bar.style.cssText = 'display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;';
+  bar.style.cssText = 'display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;padding-bottom:14px;border-bottom:2px solid var(--line-2);';
   bar.innerHTML = MT_TABS.map(t=>`<div onclick="State.mtTab='${t[0]}';State.campaignDetailId=null;State.kolProjectId=null;renderMarketingTracking()" style="cursor:pointer;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:600;${State.mtTab===t[0]?'background:var(--frog-blue,#5BA8D6);color:#fff;':'background:var(--surface-2,#f1f5f9);color:var(--muted,#64748b);'}">${t[1]}</div>`).join('');
   sec.insertBefore(bar, sec.firstChild);
 }
@@ -5922,8 +5922,9 @@ function renderCampaigns(){
 
   const html = `
     ${header('营销Campaign','MARKETING CAMPAIGN','06 · 模块','营销战役全流程管理')}
-    <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid var(--line-2);">
-      ${Object.keys(tabMap).map(t=>`<div class="sub-tab ${tab===t?'active':''}" onclick="State.campaignTab='${t}';renderCampaigns()">${t} (${State.data.campaigns.filter(c=>c.status===t).length})</div>`).join('')}
+    <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:2px solid var(--line-2);padding-left:4px;">
+      <div style="font-size:11px;color:var(--muted);align-self:flex-end;padding-bottom:10px;margin-right:4px;letter-spacing:.5px;">状态筛选</div>
+      ${Object.keys(tabMap).map(t=>`<div class="sub-tab ${tab===t?'active':''}" style="font-size:12px;" onclick="State.campaignTab='${t}';renderCampaigns()">${t} (${State.data.campaigns.filter(c=>c.status===t).length})</div>`).join('')}
       <div style="flex:1"></div>
       <button class="btn ghost sm" style="margin-bottom:8px;" onclick="importCampaignsCsv()">📤 导入CSV</button>
       <button class="btn sm" style="margin-bottom:8px;" onclick="addCampaign()">+ 新建Campaign</button>
@@ -6300,6 +6301,7 @@ function renderEventDetail(id){
         <table class="tbl"><tbody>
           <tr><td>类型</td><td>${e.type}</td></tr>
           <tr><td>负责人</td><td>${e.lead}</td></tr>
+          ${e.members?`<tr><td>项目组成员</td><td>${e.members}</td></tr>`:''}
           <tr><td>日期</td><td>${e.date}${e.endDate&&e.endDate!==e.date?' ~ '+e.endDate:''}</td></tr>
           <tr><td>地点</td><td>${e.location}</td></tr>
           <tr><td>总预算</td><td>${(e.budget/10000).toFixed(0)}万</td></tr>
@@ -6383,7 +6385,7 @@ function addEvent(){
   $('#modalGenericBody').innerHTML = `
     <div class="form-group"><label>活动名称</label><input class="input" id="evName"></div>
     <div class="form-row">
-      <div class="form-group"><label>类型</label><select class="select" id="evType"><option>发布会</option><option>展会</option><option>快闪</option><option>品鉴会</option><option>路演</option></select></div>
+      <div class="form-group"><label>类型</label><input class="input" id="evType" list="evTypeList" placeholder="选择或输入活动类型"><datalist id="evTypeList"><option>发布会</option><option>展会</option><option>快闪</option><option>品鉴会</option><option>路演</option><option>线下沙龙</option><option>联名活动</option></datalist></div>
       <div class="form-group"><label>负责人</label><select class="select" id="evLead">${activeEmployees().map(e=>'<option>'+e.name+'</option>').join('')}</select></div>
     </div>
     <div class="form-row">
@@ -6391,16 +6393,17 @@ function addEvent(){
       <div class="form-group"><label>结束日期</label><input class="input" type="date" id="evEnd" value="2026-06-15"></div>
     </div>
     <div class="form-group"><label>地点</label><input class="input" id="evLocation"></div>
-    <div class="form-group"><label>预算(元)</label><input class="input" type="number" id="evBudget" value="100000"></div>`;
+    <div class="form-group"><label>预算(元)</label><input class="input" type="number" id="evBudget" value="100000"></div>
+    <div class="form-group"><label>项目组成员备注</label><input class="input" id="evMembers" placeholder="如：张三、李四、王五"></div>`;
   $('#modalGenericFoot').innerHTML = '<button class="btn ghost" onclick="closeModal(\'modalGeneric\')">取消</button><button class="btn" onclick="saveEvent()">创建</button>';
   openModal('modalGeneric');
 }
 
 function saveEvent(id){
   const data = {
-    name:$('#evName').value.trim(), type:$('#evType').value, lead:$('#evLead').value,
+    name:$('#evName').value.trim(), type:$('#evType').value.trim(), lead:$('#evLead').value,
     date:$('#evDate').value, endDate:$('#evEnd').value, location:$('#evLocation').value.trim(),
-    budget:parseFloat($('#evBudget').value)||0
+    budget:parseFloat($('#evBudget').value)||0, members:$('#evMembers').value.trim()
   };
   if(!data.name){alert('请填写活动名称');return;}
   if(id){
@@ -6418,7 +6421,7 @@ function editEvent(id){
   addEvent();
   $('#modalGenericTitle').textContent='编辑活动';
   $('#evName').value=e.name; $('#evType').value=e.type; $('#evLead').value=e.lead;
-  $('#evDate').value=e.date; $('#evEnd').value=e.endDate; $('#evLocation').value=e.location; $('#evBudget').value=e.budget;
+  $('#evDate').value=e.date; $('#evEnd').value=e.endDate; $('#evLocation').value=e.location; $('#evBudget').value=e.budget; $('#evMembers').value=e.members||'';
   $('#modalGenericFoot').innerHTML = `<button class="btn ghost" onclick="closeModal('modalGeneric')">取消</button><button class="btn" onclick="saveEvent('${id}')">保存</button>`;
 }
 
