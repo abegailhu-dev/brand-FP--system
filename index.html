@@ -169,6 +169,23 @@ body{
   line-height:1.6;
 }
 .sidebar-footer strong{color:var(--ink-3); font-weight:600;}
+/* Toast notifications */
+.toast-container{position:fixed;bottom:80px;right:24px;z-index:10000;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{padding:10px 16px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.25);pointer-events:auto;display:flex;align-items:center;gap:10px;min-width:200px;max-width:340px;color:#fff;animation:toastIn .2s ease;}
+.toast.out{animation:toastOut .2s ease forwards;}
+.toast.success{background:#1e293b;}
+.toast.error{background:#ef4444;}
+.toast.warn{background:#f59e0b;}
+.toast.info{background:#5BA8D6;}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:none;}}
+@keyframes toastOut{to{opacity:0;transform:translateX(20px);}}
+/* Nav search result item */
+.nav-search-item{display:flex;align-items:center;gap:10px;padding:9px 14px;cursor:pointer;transition:background .1s;}
+.nav-search-item:hover{background:var(--frog-blue-pale);}
+/* Nav badge */
+.nav-num{font-family:var(--font-mono);font-size:13px;color:var(--muted-2);font-weight:500;min-width:22px;text-align:center;}
+/* Overdue pulse */
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
 .main{
   padding:0;
   overflow-x:hidden;
@@ -1275,86 +1292,90 @@ input[type=file]{display:none;}
       <span class="brand-tag">管理OS v2.0</span>
     </div>
 
+    <!-- 全局搜索 -->
+    <div style="padding:0 12px 10px;position:relative;">
+      <input id="navSearchInput" type="text" autocomplete="off" placeholder="🔍 全局搜索…" oninput="navSearch(this.value)" onkeydown="if(event.key==='Escape'){this.value='';navSearch('');}"
+        style="width:100%;box-sizing:border-box;padding:7px 12px;border:1px solid var(--line-2);border-radius:8px;font-size:12px;background:var(--bg-3);color:var(--ink);outline:none;">
+      <div id="navSearchDrop" style="display:none;position:absolute;left:12px;right:12px;top:calc(100% - 4px);background:#fff;border:1px solid var(--line-2);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:500;max-height:320px;overflow-y:auto;"></div>
+    </div>
+
     <div class="nav-section">
-      <div class="nav-label">管理中心</div>
+      <div class="nav-label">管理驾驶舱</div>
       <div class="nav-item active" data-view="dashboard">
-        <span class="nav-num">01</span>
+        <span class="nav-num">📊</span>
         <span class="nav-text">部门总看板</span>
       </div>
       <div class="nav-item" data-view="strategy">
-        <span class="nav-num">02</span>
-        <span class="nav-text">战略规划与OKR</span>
+        <span class="nav-num">🎯</span>
+        <span class="nav-text">战略规划·OKR</span>
       </div>
       <div class="nav-item" data-view="tasks">
-        <span class="nav-num">03</span>
+        <span class="nav-num">✅</span>
         <span class="nav-text">任务管理中心</span>
+        <span id="taskOverdueBadge" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;min-width:18px;text-align:center;line-height:16px;"></span>
       </div>
       <div class="nav-item" data-view="budget">
-        <span class="nav-num">04</span>
+        <span class="nav-num">💰</span>
         <span class="nav-text">预算中心</span>
       </div>
     </div>
 
     <div class="nav-section">
-      <div class="nav-label">业务板块</div>
+      <div class="nav-label">营销执行</div>
       <div class="nav-item" data-view="calendar">
-        <span class="nav-num">05</span>
+        <span class="nav-num">📅</span>
         <span class="nav-text">内容日历</span>
       </div>
       <div class="nav-item" data-view="marketing-tracking">
-        <span class="nav-num">06</span>
+        <span class="nav-num">📈</span>
         <span class="nav-text">营销推广追踪</span>
       </div>
       <div class="nav-item" data-view="events">
-        <span class="nav-num">07</span>
+        <span class="nav-num">🎪</span>
         <span class="nav-text">线下活动/展会</span>
       </div>
       <div class="nav-item" data-view="social-media">
-        <span class="nav-num">08</span>
+        <span class="nav-num">📱</span>
         <span class="nav-text">自媒体数据</span>
       </div>
-      <div class="nav-item" data-view="brand-assets">
-        <span class="nav-num">09</span>
-        <span class="nav-text">品牌资产中心</span>
-      </div>
-    </div>
-
-    <div class="nav-section">
-      <div class="nav-label">协作与洞察</div>
-      <div class="nav-item" data-view="cross-dept">
-        <span class="nav-num">11</span>
-        <span class="nav-text">跨部门需求池</span>
-      </div>
-      <div class="nav-item" data-view="consumer">
-        <span class="nav-num">12</span>
-        <span class="nav-text">消费者洞察</span>
-      </div>
       <div class="nav-item" data-view="vendors">
-        <span class="nav-num">12</span>
+        <span class="nav-num">🤝</span>
         <span class="nav-text">外部资产管理</span>
       </div>
     </div>
 
     <div class="nav-section">
-      <div class="nav-label">分析与报告</div>
+      <div class="nav-label">品牌与洞察</div>
+      <div class="nav-item" data-view="brand-assets">
+        <span class="nav-num">🏆</span>
+        <span class="nav-text">品牌资产中心</span>
+      </div>
+      <div class="nav-item" data-view="consumer">
+        <span class="nav-num">👥</span>
+        <span class="nav-text">消费者洞察</span>
+      </div>
       <div class="nav-item" data-view="analytics">
-        <span class="nav-num">14</span>
+        <span class="nav-num">📉</span>
         <span class="nav-text">数据分析看板</span>
       </div>
       <div class="nav-item" data-view="reports">
-        <span class="nav-num">15</span>
-        <span class="nav-text">报告与复盘中心</span>
+        <span class="nav-num">📋</span>
+        <span class="nav-text">报告·复盘</span>
       </div>
     </div>
 
     <div class="nav-section">
-      <div class="nav-label">团队管理</div>
+      <div class="nav-label">团队协作</div>
+      <div class="nav-item" data-view="cross-dept">
+        <span class="nav-num">🔗</span>
+        <span class="nav-text">跨部门需求池</span>
+      </div>
       <div class="nav-item" data-view="talent">
-        <span class="nav-num">16</span>
+        <span class="nav-num">👤</span>
         <span class="nav-text">人才管理</span>
       </div>
       <div class="nav-item" data-view="data-manage">
-        <span class="nav-num"></span>
+        <span class="nav-num">⚙️</span>
         <span class="nav-text">数据管理</span>
       </div>
     </div>
@@ -1683,6 +1704,7 @@ const Storage = {
   _updateTip(text){
     const tip = document.getElementById('lastSavedTip');
     if(tip) tip.textContent = text;
+    if(typeof _navBadgeUpdate === 'function') _navBadgeUpdate();
   },
 
   /* ---- 核心 load / save ---- */
@@ -2139,6 +2161,22 @@ function header(title, subEn, eyebrow, desc){
 
 function renderDashboard(){
   const d = State.data.dashboardData;
+  // Live budget from actual data
+  const bd = State.data.budgetData;
+  if(bd && d.budget){
+    d.budget.total = bd.annual;
+    d.budget.used = bd.categories.reduce((s,c)=>s+c.used,0);
+    d.budget.items = bd.categories.map(c=>({name:c.name, budget:c.budget, used:c.used}));
+  }
+  // Live OKR from actual strategy
+  const strat = State.data.strategy;
+  if(strat && strat.okrs && strat.okrs.length && d.okrs){
+    d.okrs = strat.okrs.slice(0,4).map(o=>{
+      const krs = o.keyResults||[];
+      const progress = krs.length ? Math.round(krs.reduce((s,kr)=>{ const t=kr.target||1; return s+(Math.min(kr.current||0,t)/t*100); },0)/krs.length) : 0;
+      return { objective: o.objective||o.title||'', progress, kr: o.id||'KR' };
+    });
+  }
   const active = activeEmployees();
   const tasks = State.data.tasks.filter(t => t.weekOf === State.data.currentWeek);
 
@@ -2455,6 +2493,8 @@ function renderTasks(){
   const wNum = getWeekNumber(week);
   const wDates = getWeekDates(week);
   const tasks = State.data.tasks.filter(t => t.weekOf === week);
+  const overdueTasks = State.data.tasks.filter(t => t.weekOf < week && !['已完成','取消'].includes(t.status));
+  _navBadgeUpdate();
   const assignable = activeEmployees().filter(e => e.name !== '胡瑕');
 
   // Workload calc
@@ -2570,7 +2610,8 @@ function renderTasks(){
 
     <div class="card elevated">
       <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:6px;">
-        <div class="card-title" style="margin:0;">任务明细 · TASK DETAILS</div>
+        <div class="card-title" style="margin:0;">任务明细 · TASK DETAILS${overdueTasks.length?` <span style="background:#fee2e2;color:#ef4444;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:6px;">⚠ ${overdueTasks.length}项逾期未完成</span>`:''}
+        </div>
         <div class="spacer" style="flex:1;"></div>
         <button class="btn ghost sm" onclick="batchToggle('tasks',renderTasks)" style="${State.batchMod==='tasks'?'background:var(--frog-blue);color:#fff;':''}">☑ 批量选择</button>
         <label style="font-size:12px; color:var(--muted);">按人员筛选</label>
@@ -8191,7 +8232,7 @@ function renderVendors(){
 
   const vtab = State._vendorTab||'list';
   const html = `
-    ${header('外部资产管理', 'EXTERNAL ASSETS', '12 · 协作与洞察', '供应商档案、达人资源库、合同管理与付款/用印/寄件/归档状态追踪。')}
+    ${header('外部资产管理','EXTERNAL ASSETS','营销执行 · 外部资产','达人资源库 · 供应商管理 · 合同追踪')}
     <div class="sub-tabs">
       <div class="sub-tab ${vtab==='list'?'active':''}" onclick="State._vendorTab='list';renderVendors();">供应商</div>
       <div class="sub-tab ${vtab==='kol'?'active':''}" onclick="State._vendorTab='kol';renderVendors();">达人资源库</div>
@@ -9308,6 +9349,7 @@ function batchExecuteDelete(){
   else if(mod==='kols') State.data.kolData.kols=State.data.kolData.kols.filter(x=>!sel.has(x.id));
   else if(mod==='calItems') State.data.calendarItems=State.data.calendarItems.filter(x=>!sel.has(x.id));
   Storage.save(State.data);
+  toast(`已删除 ${sel.size} 条记录`);
   State.batchMod=null; State.batchSel=new Set(); State._batchRenderFn=null;
   _batchBarUpdate();
   // re-render
@@ -9327,6 +9369,102 @@ function cancelBatchMode(){
   if(fn) fn();
 }
 
+/* ===== Toast 通知系统 ===== */
+function toast(msg, type='success', duration=3000){
+  const c=document.getElementById('toastContainer'); if(!c) return;
+  const icons={success:'✓',error:'✕',warn:'⚠',info:'ℹ'};
+  const t=document.createElement('div');
+  t.className='toast '+type;
+  t.innerHTML=`<span style="font-size:15px;flex-shrink:0;">${icons[type]||'✓'}</span><span style="flex:1;">${msg}</span>`;
+  c.appendChild(t);
+  setTimeout(()=>{ t.classList.add('out'); setTimeout(()=>t.remove(),220); }, duration);
+}
+
+/* 替换破坏性操作 confirm() → 自定义美化弹窗，返回 Promise */
+function confirmDialog(msg, title='确认操作', okLabel='确认删除'){
+  return new Promise(resolve=>{
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent = msg;
+    document.getElementById('confirmOkBtn').textContent = okLabel;
+    window._confirmResolve = ()=>resolve(true);
+    window._confirmReject  = ()=>resolve(false);
+    openModal('modalConfirm');
+  });
+}
+
+/* ===== 全局搜索 ===== */
+function navSearch(q){
+  const drop=document.getElementById('navSearchDrop'); if(!drop) return;
+  q=(q||'').trim().toLowerCase();
+  if(!q){ drop.style.display='none'; return; }
+  const results=[];
+  const add=(icon,label,sub,action)=>results.push({icon,label,sub,action});
+
+  (State.data&&State.data.tasks||[])
+    .filter(t=>(t.title||'').toLowerCase().includes(q)||(t.assignee||'').toLowerCase().includes(q))
+    .slice(0,3).forEach(t=>add('✅',t.title,`任务 · ${t.assignee}`,`go('tasks')`));
+
+  (State.data&&State.data.campaigns||[])
+    .filter(c=>(c.name||'').toLowerCase().includes(q)||(c.lead||'').toLowerCase().includes(q))
+    .slice(0,3).forEach(c=>add('📈',c.name,`Campaign · ${c.lead}`,`State.mtTab='campaign';State.campaignDetailId='${c.id}';go('marketing-tracking')`));
+
+  (State.data&&State.data.events||[])
+    .filter(e=>(e.name||'').toLowerCase().includes(q)||(e.location||'').toLowerCase().includes(q))
+    .slice(0,3).forEach(e=>add('🎪',e.name,`活动 · ${e.date}`,`State.eventDetailId='${e.id}';go('events')`));
+
+  const kd=State.data&&State.data.kolData;
+  (kd&&kd.kols||[]).filter(k=>(k.name||'').toLowerCase().includes(q)||(k.field||'').toLowerCase().includes(q))
+    .slice(0,3).forEach(k=>add('⭐',k.name,`达人 · ${k.platform} · ${k.field}`,`State.mtTab='seeding';State.kolTab='library';go('marketing-tracking')`));
+
+  (State.data&&State.data.employees||[])
+    .filter(e=>e.status!=='空缺'&&((e.name||'').toLowerCase().includes(q)||(e.position||'').toLowerCase().includes(q)))
+    .slice(0,3).forEach(e=>add('👤',e.name,`${e.position} · ${e.group}`,`go('talent')`));
+
+  if(!results.length){
+    drop.innerHTML='<div style="padding:12px 16px;font-size:12px;color:#94a3b8;text-align:center;">无匹配结果</div>';
+    drop.style.display='block'; return;
+  }
+  drop.innerHTML=results.map(r=>`<div class="nav-search-item" onclick="${r.action};document.getElementById('navSearchInput').value='';document.getElementById('navSearchDrop').style.display='none'">
+    <span style="font-size:15px;flex-shrink:0;">${r.icon}</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink);">${r.label}</div>
+      <div style="font-size:10px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${r.sub}</div>
+    </div>
+  </div>`).join('');
+  drop.style.display='block';
+}
+/* 点击页面其他地方关闭搜索下拉 */
+document.addEventListener('click', e=>{
+  const wrap=document.getElementById('navSearchInput');
+  const drop=document.getElementById('navSearchDrop');
+  if(drop&&!e.target.closest('#navSearchDrop')&&e.target!==wrap) drop.style.display='none';
+});
+
+/* ===== ESC 关闭任何已打开的模态框；点击遮罩也关闭 ===== */
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  ['modalGeneric','modalTask','modalEdit','modalDetail','modalPriority','modalConfirm'].forEach(id=>{
+    const m=document.getElementById(id);
+    if(m&&m.classList.contains('open')) closeModal(id);
+  });
+  if(State.batchMod) cancelBatchMode();
+});
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.querySelectorAll('.modal').forEach(m=>{
+    m.addEventListener('click', e=>{ if(e.target===m) closeModal(m.id); });
+  });
+  _navBadgeUpdate();
+});
+
+/* ===== 逾期任务徽章 ===== */
+function _navBadgeUpdate(){
+  if(!State.data) return;
+  const cw=State.data.currentWeek||'';
+  const overdue=(State.data.tasks||[]).filter(t=>t.weekOf&&t.weekOf<cw&&!['已完成','取消'].includes(t.status)).length;
+  const badge=document.getElementById('taskOverdueBadge');
+  if(badge){ badge.textContent=overdue||''; badge.style.display=overdue?'inline-block':'none'; if(overdue) badge.style.animation='pulse 1.5s infinite'; }
+}
+
 window.addEventListener('DOMContentLoaded', init);
 </script>
 <div id="globalBatchBar" class="batch-bar hidden">
@@ -9334,6 +9472,19 @@ window.addEventListener('DOMContentLoaded', init);
   <button class="batch-cancel" id="batchToggleAllBtn" onclick="batchToggleAll()">☑ 全选</button>
   <button class="batch-del" onclick="batchExecuteDelete()">🗑 删除选中</button>
   <button class="batch-cancel" onclick="cancelBatchMode()">✕ 取消</button>
+</div>
+<!-- Toast container -->
+<div class="toast-container" id="toastContainer"></div>
+<!-- Custom confirm modal -->
+<div class="modal" id="modalConfirm">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-head"><span id="confirmTitle" class="modal-title">确认操作</span></div>
+    <div class="modal-body"><p id="confirmMsg" style="font-size:14px;color:var(--ink-3);margin:0;line-height:1.6;"></p></div>
+    <div class="modal-foot">
+      <button class="btn ghost" onclick="closeModal('modalConfirm');if(window._confirmReject)window._confirmReject();">取消</button>
+      <button class="btn" id="confirmOkBtn" style="background:#ef4444;" onclick="closeModal('modalConfirm');if(window._confirmResolve)window._confirmResolve();">确认删除</button>
+    </div>
+  </div>
 </div>
 </body>
 </html>
