@@ -288,6 +288,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
   </div>
   <nav class="navgroups"><div class="navgroups-inner" id="navGroups"></div></nav>
   <div class="top-actions">
+    <button class="btn sm ghost" style="font-size:12px;gap:5px;" onclick="openTeamEntry()" title="团队成员填报数据入口">📋 团队填报</button>
     <button class="icon-pill" title="搜索 (Ctrl+K)" onclick="openPalette()">⌕</button>
     <button class="icon-pill" title="通知" onclick="showNotifications()">🔔<span class="ndot" id="navDot"></span></button>
     <button class="icon-pill" title="设置 / AI Key" onclick="openSettings()">⚙</button>
@@ -1412,6 +1413,25 @@ function renderDashboard(){
 function dashPeriod(btn){ $$('.seg button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); }
 
 /* ============ STRATEGY / OKR ============ */
+function calcCycleRisk(cycle){
+  // parse cycle string like "2026-H1" or "2026-Q2" to get start/end
+  const now=new Date(); const c=cycle||'';
+  let start,end;
+  if(c.includes('-H1')){ const y=parseInt(c); start=new Date(y,0,1); end=new Date(y,5,30); }
+  else if(c.includes('-H2')){ const y=parseInt(c); start=new Date(y,6,1); end=new Date(y,11,31); }
+  else if(/Q([1-4])/.test(c)){ const y=parseInt(c); const q=parseInt(c.match(/Q(\d)/)[1]); const qm=(q-1)*3; start=new Date(y,qm,1); end=new Date(y,qm+3,0); }
+  else { start=new Date(now.getFullYear(),0,1); end=new Date(now.getFullYear(),11,31); }
+  const total=end-start; const elapsed=now-start;
+  return Math.min(100,Math.max(0,Math.round(elapsed/total*100)));
+}
+function krRiskLevel(progress,elapsed){
+  if(elapsed<=0) return 'ok';
+  const expected=elapsed;
+  const behind=expected-progress;
+  if(behind>=30) return 'danger';
+  if(behind>=15) return 'warn';
+  return 'ok';
+}
 function renderStrategy(){
   const d = State.data;
   const okrData = d.okr||[];
@@ -1419,25 +1439,75 @@ function renderStrategy(){
   const objs = cycle.objectives||[];
   const allKRs = objs.flatMap(o=>o.krs||[]);
   const avgProg = allKRs.length ? Math.round(allKRs.reduce((s,k)=>s+(k.progress||0),0)/allKRs.length) : 0;
+  const elapsed = calcCycleRisk(cycle.cycle);
+  const dangerKRs = allKRs.filter(kr=>krRiskLevel(kr.progress||0,elapsed)==='danger');
+  const warnKRs = allKRs.filter(kr=>krRiskLevel(kr.progress||0,elapsed)==='warn');
+  const kpiData = d.brandKPI||[];
 
   $('#main').innerHTML = `
 <div class="page-head">
-  <div><div class="page-title">战略 OKR</div><div class="page-sub">周期：${esc(cycle.cycle)} · 整体进度 ${avgProg}%</div></div>
-  <div class="page-actions"><button class="btn sm ghost" onclick="editOKRTitle()">✎ 编辑周期</button><button class="btn sm" onclick="addObjective()">+ 新增目标</button></div>
+  <div><div class="page-title">战略 OKR / KPI</div><div class="page-sub">周期：${esc(cycle.cycle)} · 整体进度 ${avgProg}% · 时间已过 ${elapsed}%</div></div>
+  <div class="page-actions">
+    <button class="btn sm ghost" onclick="editOKRTitle()">✎ 编辑周期</button>
+    <button class="btn sm ghost" onclick="manageKPI()">📊 KPI指标</button>
+    <button class="btn sm" onclick="addObjective()">+ 新增目标</button>
+  </div>
 </div>
+${(dangerKRs.length||warnKRs.length)?`
+<div style="background:var(--red-pale);border:1.5px solid #fad1d1;border-radius:var(--r);padding:14px 18px;margin-bottom:18px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+    <span style="font-size:16px;">⚠️</span>
+    <span style="font-weight:700;font-size:14px;color:var(--red);">OKR 风险预警</span>
+    <span style="font-size:12px;color:var(--muted);">当前时间进度 ${elapsed}%，以下 KR 存在完成风险</span>
+  </div>
+  ${dangerKRs.map(kr=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#fff;border-radius:10px;margin-bottom:6px;">
+    <span style="font-size:11px;font-weight:700;color:#fff;background:var(--red);border-radius:5px;padding:2px 7px;">高风险</span>
+    <span style="font-size:13px;font-weight:500;flex:1;">${esc(kr.title)}</span>
+    <span style="font-size:11px;color:var(--muted);">进度 ${kr.progress||0}% vs 预期 ${elapsed}%</span>
+    <span style="font-family:var(--font-m);font-size:11px;color:var(--red);font-weight:700;">落后 ${elapsed-(kr.progress||0)}%</span>
+  </div>`).join('')}
+  ${warnKRs.map(kr=>`<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#fff;border-radius:10px;margin-bottom:6px;">
+    <span style="font-size:11px;font-weight:700;color:#fff;background:var(--amber);border-radius:5px;padding:2px 7px;">需关注</span>
+    <span style="font-size:13px;font-weight:500;flex:1;">${esc(kr.title)}</span>
+    <span style="font-size:11px;color:var(--muted);">进度 ${kr.progress||0}% vs 预期 ${elapsed}%</span>
+    <span style="font-family:var(--font-m);font-size:11px;color:var(--amber);font-weight:700;">落后 ${elapsed-(kr.progress||0)}%</span>
+  </div>`).join('')}
+</div>`:''}
 <div class="statchips">
   ${statChip('目标数',objs.length+'个','⬡','var(--lavender)','var(--lavender-ink)')}
   ${statChip('关键结果',allKRs.length+'项','◇','var(--powder)','var(--powder-ink)')}
   ${statChip('平均进度',avgProg+'%','△','var(--mint)','var(--mint-ink)')}
-  ${statChip('高进度KR(≥70%)',allKRs.filter(k=>(k.progress||0)>=70).length+'项','★','var(--cream)','var(--cream-ink)')}
+  ${statChip('风险KR',dangerKRs.length+'项','⚠','var(--blush)','var(--blush-ink)')}
 </div>
+${kpiData.length?`
+<div class="card" style="margin-bottom:18px;">
+  <div class="card-t">品牌 KPI 达成情况<span class="ct-sub">共 ${kpiData.length} 项</span></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;">
+    ${kpiData.map(k=>{
+      const pct=k.target?Math.round((k.current/k.target)*100):0;
+      const risk=krRiskLevel(pct,elapsed);
+      const clr=risk==='danger'?'var(--red)':risk==='warn'?'var(--amber)':'var(--green-ink)';
+      const bg=risk==='danger'?'var(--red-pale)':risk==='warn'?'var(--amber-pale)':'var(--green-pale)';
+      return `<div style="background:${bg};border-radius:13px;padding:13px 15px;">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">${esc(k.name)} <span style="color:${clr};font-weight:700;">${risk==='danger'?'⚠ 风险':risk==='warn'?'△ 关注':'✓ 正常'}</span></div>
+        <div style="font-family:var(--font-d);font-size:20px;font-weight:700;color:${clr};">${fmtN(k.current)}<span style="font-size:12px;color:var(--muted);font-family:var(--font);font-weight:400;"> / ${fmtN(k.target)} ${esc(k.unit||'')}</span></div>
+        <div style="margin-top:8px;height:5px;background:rgba(0,0,0,.06);border-radius:99px;overflow:hidden;"><div style="height:100%;width:${Math.min(100,pct)}%;background:${clr};border-radius:99px;"></div></div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px;">${pct}% 达成 · 目标周期 ${esc(cycle.cycle)}</div>
+      </div>`;
+    }).join('')}
+  </div>
+</div>`:''}
 <div class="grid" style="margin-bottom:18px;">
-  <div class="col-8 card"><div class="card-t">整体进度</div><div style="height:180px;"><canvas id="okrRadar"></canvas></div></div>
+  <div class="col-8 card"><div class="card-t">目标进度雷达</div><div style="height:200px;"><canvas id="okrRadar"></canvas></div></div>
   <div class="col-4 card dark"><div class="card-t">周期概要</div>
     <div style="font-size:13px;color:#d0d0da;line-height:1.7;">${esc(cycle.title)||'<span style="color:#5a5a62;">未设置周期目标</span>'}</div>
     <div style="margin-top:16px;background:#2a2a30;border-radius:12px;padding:12px;">
       <div style="font-size:11px;color:#6a6a74;margin-bottom:8px;letter-spacing:.5px;">整体进度</div>
       <div style="display:flex;align-items:center;gap:10px;"><div style="flex:1;background:#3a3a42;border-radius:99px;height:8px;overflow:hidden;"><div style="height:100%;width:${avgProg}%;background:var(--green);border-radius:99px;"></div></div><span style="font-family:var(--font-m);font-size:13px;color:var(--green);">${avgProg}%</span></div>
+    </div>
+    <div style="margin-top:10px;background:#2a2a30;border-radius:12px;padding:12px;">
+      <div style="font-size:11px;color:#6a6a74;margin-bottom:8px;letter-spacing:.5px;">时间进度</div>
+      <div style="display:flex;align-items:center;gap:10px;"><div style="flex:1;background:#3a3a42;border-radius:99px;height:8px;overflow:hidden;"><div style="height:100%;width:${elapsed}%;background:#f59e0b;border-radius:99px;"></div></div><span style="font-family:var(--font-m);font-size:13px;color:#f59e0b;">${elapsed}%</span></div>
     </div>
   </div>
 </div>
@@ -1450,18 +1520,22 @@ ${objs.map((obj,oi)=>`
     </div>
     <div style="display:flex;gap:6px;"><button class="btn xs ghost" onclick="addKR(${oi})">+ KR</button><button class="btn xs ghost" onclick="editObj(${oi})">✎</button><button class="btn xs danger" onclick="delObj(${oi})">✕</button></div>
   </div>
-  ${(obj.krs||[]).map((kr,ki)=>`
-  <div class="okr-kr">
+  ${(obj.krs||[]).map((kr,ki)=>{
+    const risk=krRiskLevel(kr.progress||0,elapsed);
+    const riskBadge=risk==='danger'?'<span style="font-size:10px;font-weight:700;color:#fff;background:var(--red);border-radius:4px;padding:1px 6px;flex-shrink:0;">⚠ 高风险</span>':risk==='warn'?'<span style="font-size:10px;font-weight:700;color:#fff;background:var(--amber);border-radius:4px;padding:1px 6px;flex-shrink:0;">△ 关注</span>':'';
+    return `
+  <div class="okr-kr" style="${risk==='danger'?'background:var(--red-pale);border-radius:10px;padding:10px 8px;':''}">
     <div style="width:22px;height:22px;border-radius:7px;background:var(--bg);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;">KR${ki+1}</div>
-    <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:500;margin-bottom:3px;">${esc(kr.title)}</div>
+    <div style="flex:1;min-width:0;"><div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;margin-bottom:3px;">${esc(kr.title)}${riskBadge}</div>
       <div style="display:flex;align-items:center;gap:12px;font-size:11.5px;color:var(--muted);">
         <span>目标：${esc(kr.target)}</span><span>当前：<strong style="color:var(--ink);">${esc(kr.current)}</strong></span>
         ${avatar(kr.owner,'sm')} <span>${esc(kr.owner)}</span>
       </div>
     </div>
-    ${progBar(kr.progress||0, kr.progress>=70?'green':kr.progress>=40?'amber':'red')}
+    ${progBar(kr.progress||0, risk==='danger'?'red':risk==='warn'?'amber':'green')}
     <div style="display:flex;gap:5px;"><button class="btn xs ghost" onclick="editKR(${oi},${ki})">✎</button><button class="btn xs danger" onclick="delKR(${oi},${ki})">✕</button></div>
-  </div>`).join('')}
+  </div>`;
+  }).join('')}
   ${!(obj.krs||[]).length?`<div class="muted" style="font-size:12px;padding:8px 0;">暂无关键结果，点击 +KR 添加</div>`:''}
 </div>`).join('')||`<div class="card">${emptyState('⬡','暂无目标','点击右上角新增 Objective','<button class="btn sm" onclick="addObjective()">+ 新增目标</button>')}</div>`}`;
 
@@ -1472,6 +1546,55 @@ ${objs.map((obj,oi)=>`
   },50);
 }
 
+function manageKPI(){
+  openModal('品牌 KPI 指标管理','BRAND KPI',`
+    <div style="margin-bottom:12px;font-size:12px;color:var(--muted);">管理品牌关键绩效指标，设置目标值并跟踪当前完成情况</div>
+    <div id="kpiList" style="margin-bottom:14px;">${(State.data.brandKPI||[]).map((k,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px dashed var(--border);">
+        <span style="flex:1;font-size:13px;font-weight:500;">${esc(k.name)}</span>
+        <span style="font-size:12px;color:var(--muted);">${fmtN(k.current)} / ${fmtN(k.target)} ${esc(k.unit||'')}</span>
+        <button class="btn xs ghost" onclick="editKPIItem(${i})">✎</button>
+        <button class="btn xs danger" onclick="delKPIItem(${i})">✕</button>
+      </div>`).join('')||'<div class="muted" style="padding:12px 0;font-size:12px;">暂无KPI指标</div>'}</div>
+    <div style="background:var(--bg);border-radius:12px;padding:14px;">
+      <div style="font-size:12px;font-weight:700;margin-bottom:10px;">添加新指标</div>
+      <div class="frow">
+        <div class="fg"><label>指标名称</label><input class="input" id="kpi_name" placeholder="如：月度销售额"></div>
+        <div class="fg"><label>单位</label><input class="input" id="kpi_unit" placeholder="万元 / 万次 / %"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>目标值</label><input class="input" type="number" id="kpi_target" placeholder="0"></div>
+        <div class="fg"><label>当前完成</label><input class="input" type="number" id="kpi_current" placeholder="0"></div>
+      </div>
+      <button class="btn sm green" onclick="addKPIItem()">+ 添加指标</button>
+    </div>`,
+    `<button class="btn ghost" onclick="closeModal()">关闭</button><button class="btn" onclick="save();closeModal();renderStrategy();toast('KPI已保存')">保存</button>`);
+}
+function addKPIItem(){
+  const name=$('#kpi_name').value.trim(); if(!name){toast('请填写指标名称','warn');return;}
+  if(!State.data.brandKPI) State.data.brandKPI=[];
+  State.data.brandKPI.push({name,unit:$('#kpi_unit').value.trim(),target:Number($('#kpi_target').value)||0,current:Number($('#kpi_current').value)||0});
+  manageKPI();
+}
+function editKPIItem(i){
+  const k=(State.data.brandKPI||[])[i]; if(!k) return;
+  openModal('编辑KPI指标','EDIT KPI',formHTML([
+    {k:'name',label:'指标名称',def:k.name},
+    {k:'unit',label:'单位',def:k.unit||''},
+    {k:'target',label:'目标值',type:'number',def:k.target||0},
+    {k:'current',label:'当前完成',type:'number',def:k.current||0}
+  ],k),`<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveKPIItem(${i})">保存</button>`);
+}
+function saveKPIItem(i){
+  const f=readForm([{k:'name'},{k:'unit'},{k:'target',type:'number'},{k:'current',type:'number'}]);
+  if(!f.name){toast('请填写指标名称','warn');return;}
+  State.data.brandKPI[i]=Object.assign({},State.data.brandKPI[i],f);
+  save(); closeModal(); renderStrategy(); toast('已保存');
+}
+function delKPIItem(i){
+  (State.data.brandKPI||[]).splice(i,1);
+  manageKPI();
+}
 function editOKRTitle(){
   const cycle = (State.data.okr||[])[0]||{};
   openModal('编辑OKR周期','EDIT CYCLE',formHTML([
@@ -2004,32 +2127,41 @@ function saveEvent(id){
 }
 
 /* ============ MARKETING TRACKING ============ */
-function renderMarketingTracking(){
+function renderMarketingTracking(tab){
+  tab=tab||State.mktTab||'effect';
+  State.mktTab=tab;
   const mkt=State.data.marketingTracking||[];
   const totalSpend=mkt.reduce((s,m)=>s+(Number(m.spent)||0),0);
   const totalRev=mkt.reduce((s,m)=>s+(Number(m.revenue)||0),0);
   const avgROI=totalSpend?totalRev/totalSpend:0;
+  const kwData=State.data.brandKeywords||[];
 
   $('#main').innerHTML=`
 <div class="page-head">
-  <div><div class="page-title">推广追踪</div><div class="page-sub">各渠道推广效果监控</div></div>
+  <div><div class="page-title">推广追踪</div><div class="page-sub">各渠道投放效果 · 品牌搜索指数关联分析</div></div>
   <div class="page-actions">
-    <button class="btn sm ghost" onclick="exportXlsx(mkt,['渠道','Campaign','类型','预算','已花','曝光','点击','转化','营收','状态'],['channel','campaign','type','budget','spent','impressions','clicks','conversions','revenue','status'],'推广追踪.xlsx')">导出</button>
-    <button class="btn sm" onclick="mktForm()">+ 新增</button>
+    ${tab==='effect'?`<button class="btn sm ghost" onclick="exportXlsx(State.data.marketingTracking||[],['渠道','Campaign','类型','预算','已花','曝光','点击','转化','营收','状态'],['channel','campaign','type','budget','spent','impressions','clicks','conversions','revenue','status'],'推广追踪.xlsx')">导出</button>
+    <button class="btn sm" onclick="mktForm()">+ 新增投放</button>`:`<button class="btn sm ghost" onclick="exportXlsx(State.data.brandKeywords||[],['关键词','平台','日期','搜索指数','备注'],['keyword','platform','date','index','notes'],'品牌搜索指数.xlsx')">导出</button>
+    <button class="btn sm" onclick="kwForm()">+ 录入搜索数据</button>`}
   </div>
 </div>
+<div class="seg" style="margin-bottom:18px;">
+  <button class="${tab==='effect'?'on':''}" onclick="renderMarketingTracking('effect')">📊 投放效果</button>
+  <button class="${tab==='keyword'?'on':''}" onclick="renderMarketingTracking('keyword')">🔍 品牌搜索指数</button>
+</div>
+${tab==='effect'?`
 <div class="statchips">
   ${statChip('总花费','¥'+wan(totalSpend,0)+'万','◌','var(--lavender)','var(--lavender-ink)')}
   ${statChip('总营收','¥'+wan(totalRev,0)+'万','▲','var(--mint)','var(--mint-ink)')}
   ${statChip('综合ROI','1:'+avgROI.toFixed(1),'%','var(--powder)','var(--powder-ink)')}
-  ${statChip('活跃推广',mkt.filter(m=>m.status==='进行中').length+'条','▷','var(--cream)','var(--cream-ink)')}
+  ${statChip('活跃投放',mkt.filter(m=>m.status==='进行中').length+'条','▷','var(--cream)','var(--cream-ink)')}
 </div>
 <div class="grid" style="margin-bottom:18px;">
   <div class="col-8 card"><div class="card-t">渠道ROI对比</div><div style="height:200px;"><canvas id="mktROI"></canvas></div></div>
   <div class="col-4 card"><div class="card-t">渠道花费占比</div><div style="height:200px;"><canvas id="mktDonut"></canvas></div></div>
 </div>
 <div class="card">
-  <div class="card-t">推广记录<span class="ct-sub">${mkt.length}条</span></div>
+  <div class="card-t">投放记录<span class="ct-sub">${mkt.length}条</span></div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr><th>渠道</th><th>Campaign/类型</th><th>状态</th><th>花费</th><th>曝光</th><th>点击</th><th>转化</th><th>营收</th><th>ROI</th><th></th></tr></thead><tbody>
     ${mkt.length?mkt.map(m=>{
       const roi=m.spent?(Number(m.revenue||0)/Number(m.spent)).toFixed(1):'—';
@@ -2045,22 +2177,101 @@ function renderMarketingTracking(){
         <td class="num" style="font-weight:700;color:${roi>3?'var(--green-ink)':'var(--ink)'};">${roi}</td>
         <td><button class="btn xs ghost" onclick="mktForm('${m.id}')">✎</button></td>
       </tr>`;
-    }).join(''):`<tr><td colspan="10">${emptyState('▷','暂无推广记录','')}</td></tr>`}
+    }).join(''):`<tr><td colspan="10">${emptyState('▷','暂无投放记录','')}</td></tr>`}
   </tbody></table></div>
-</div>`;
+</div>`:`
+<div style="background:var(--powder);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--powder-ink);">
+  <strong>品牌搜索指数</strong>：记录各平台上"青蛙王子"相关关键词搜索量/搜索指数，与投放时间线对比，判断投放是否带动品牌搜索热度。
+</div>
+<div class="grid" style="margin-bottom:18px;">
+  <div class="col-12 card"><div class="card-t">投放花费 vs 品牌搜索指数（时间对比）</div><div style="height:240px;"><canvas id="kwCorrelChart"></canvas></div></div>
+</div>
+<div class="grid" style="margin-bottom:18px;">
+  <div class="col-6 card"><div class="card-t">各平台搜索指数分布</div><div style="height:200px;"><canvas id="kwPlatformChart"></canvas></div></div>
+  <div class="col-6 card"><div class="card-t">关键词热度排名</div>
+    ${kwData.length?`<div style="display:flex;flex-direction:column;gap:7px;max-height:200px;overflow:auto;">${[...new Map(kwData.map(k=>[k.keyword,kwData.filter(x=>x.keyword===k.keyword).reduce((s,x)=>s+(Number(x.index)||0),0)])).entries()].sort((a,b)=>b[1]-a[1]).map(([kw,total],i)=>`
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-family:var(--font-m);font-size:11px;color:var(--muted);width:16px;">${i+1}</span>
+        <span style="font-size:13px;font-weight:500;flex:1;">${esc(kw)}</span>
+        <div style="width:80px;height:6px;background:var(--bg);border-radius:99px;overflow:hidden;"><div style="height:100%;background:var(--powder-ink);border-radius:99px;width:${Math.min(100,total/([...new Map(kwData.map(k=>[k.keyword,kwData.filter(x=>x.keyword===k.keyword).reduce((s,x)=>s+(Number(x.index)||0),0)])).values()].sort((a,b)=>b-a)[0]||1)*100)}%;"></div></div>
+        <span style="font-family:var(--font-m);font-size:11px;">${fmtN(total)}</span>
+      </div>`).join('')}</div>`:`<div class="muted" style="padding:20px;font-size:12px;text-align:center;">暂无搜索数据</div>`}
+  </div>
+</div>
+<div class="card">
+  <div class="card-t">搜索指数记录<span class="ct-sub">${kwData.length}条</span></div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>关键词</th><th>平台</th><th>日期</th><th>搜索指数</th><th>备注</th><th></th></tr></thead><tbody>
+    ${kwData.length?[...kwData].sort((a,b)=>new Date(b.date||0)-new Date(a.date||0)).map(k=>`<tr>
+      <td style="font-weight:600;">${esc(k.keyword)}</td>
+      <td><span class="tag">${esc(k.platform)}</span></td>
+      <td class="num">${esc(k.date)}</td>
+      <td class="num" style="font-weight:700;">${fmtN(Number(k.index)||0)}</td>
+      <td style="font-size:11px;color:var(--muted);">${esc(k.notes||'')}</td>
+      <td><button class="btn xs ghost" onclick="kwForm('${k.id}')">✎</button></td>
+    </tr>`).join(''):`<tr><td colspan="6">${emptyState('🔍','暂无搜索数据','点击右上角录入各平台关键词搜索指数')}</td></tr>`}
+  </tbody></table></div>
+</div>`}`;
+
   setTimeout(()=>{
-    const channels=[...new Set(mkt.map(m=>m.channel))];
-    const roiData=channels.map(ch=>{
-      const items=mkt.filter(m=>m.channel===ch);
-      const sp=items.reduce((s,m)=>s+(Number(m.spent)||0),0);
-      const rv=items.reduce((s,m)=>s+(Number(m.revenue||0),0),0);
-      return sp?rv/sp:0;
-    });
-    barChart('mktROI',channels,[{data:roiData,backgroundColor:channels.map((_,i)=>i===0?'#101014':'#d6d6dc'),label:'ROI'}]);
-    const spendByCh=channels.map(ch=>mkt.filter(m=>m.channel===ch).reduce((s,m)=>s+(Number(m.spent)||0),0)/10000);
-    const colors=['#101014','#6d5bb8','#3568b8','#c2466f','#2c8a55','#a8842c'];
-    donutChart('mktDonut',channels,spendByCh,channels.map((_,i)=>colors[i%colors.length]));
+    if(tab==='effect'){
+      const channels=[...new Set(mkt.map(m=>m.channel))];
+      const roiData=channels.map(ch=>{
+        const items=mkt.filter(m=>m.channel===ch);
+        const sp=items.reduce((s,m)=>s+(Number(m.spent)||0),0);
+        const rv=items.reduce((s,m)=>s+(Number(m.revenue)||0),0);
+        return sp?rv/sp:0;
+      });
+      barChart('mktROI',channels,[{data:roiData,backgroundColor:channels.map((_,i)=>i===0?'#101014':'#d6d6dc'),label:'ROI'}]);
+      const spendByCh=channels.map(ch=>mkt.filter(m=>m.channel===ch).reduce((s,m)=>s+(Number(m.spent)||0),0)/10000);
+      const colors=['#101014','#6d5bb8','#3568b8','#c2466f','#2c8a55','#a8842c'];
+      donutChart('mktDonut',channels,spendByCh,channels.map((_,i)=>colors[i%colors.length]));
+    } else {
+      // keyword correlation chart: monthly spend vs avg search index
+      const months=[...new Set([
+        ...mkt.filter(m=>m.startDate).map(m=>m.startDate.slice(0,7)),
+        ...kwData.filter(k=>k.date).map(k=>k.date.slice(0,7))
+      ])].sort();
+      const spendByMonth=months.map(mo=>mkt.filter(m=>(m.startDate||'').startsWith(mo)).reduce((s,m)=>s+(Number(m.spent)||0),0)/10000);
+      const indexByMonth=months.map(mo=>{
+        const arr=kwData.filter(k=>(k.date||'').startsWith(mo)).map(k=>Number(k.index)||0);
+        return arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):0;
+      });
+      if(months.length>0){
+        const ctx=document.getElementById('kwCorrelChart');
+        if(ctx) new Chart(ctx,{type:'line',data:{labels:months,datasets:[
+          {label:'投放花费(万)',data:spendByMonth,borderColor:'#6d5bb8',backgroundColor:'rgba(109,91,184,.12)',yAxisID:'y',tension:.3,fill:true},
+          {label:'平均搜索指数',data:indexByMonth,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.12)',yAxisID:'y1',tension:.3,fill:true}
+        ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{y:{type:'linear',display:true,position:'left',title:{display:true,text:'花费(万元)'},grid:{color:'#f0f0f4'}},y1:{type:'linear',display:true,position:'right',title:{display:true,text:'搜索指数'},grid:{drawOnChartArea:false}}}}});
+      }
+      // platform chart
+      const platforms=[...new Set(kwData.map(k=>k.platform))];
+      const platformIndex=platforms.map(p=>{ const arr=kwData.filter(k=>k.platform===p).map(k=>Number(k.index)||0); return arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):0; });
+      if(platforms.length>0){
+        const colors2=['#3568b8','#c2466f','#6d5bb8','#2c8a55','#a8842c','#101014'];
+        donutChart('kwPlatformChart',platforms,platformIndex,platforms.map((_,i)=>colors2[i%colors2.length]));
+      }
+    }
   },50);
+}
+function kwForm(id){
+  const arr=State.data.brandKeywords||(State.data.brandKeywords=[]);
+  const k=id?arr.find(x=>x.id===id):{};
+  openModal(id?'编辑搜索数据':'录入品牌搜索指数','KEYWORD INDEX',formHTML([
+    {k:'keyword',label:'关键词',ph:'如：青蛙王子、青蛙王子婴儿、frogprince',def:k.keyword||'青蛙王子'},
+    {k:'platform',label:'平台',type:'select',options:['小红书','抖音','微博','百度','微信搜索','天猫搜索','B站','淘宝搜索'],def:k.platform||'小红书'},
+    {k:'date',label:'记录日期',type:'date',def:k.date||todayStr()},
+    {k:'index',label:'搜索指数/搜索量',type:'number',ph:'填写平台提供的搜索指数或搜索量',def:k.index||0},
+    {k:'notes',label:'备注（可关联投放项目）',type:'textarea',def:k.notes||''}
+  ],k),`${id?`<button class="btn danger sm" onclick="closeModal();confirmDialog('删除此记录？',()=>{const i=State.data.brandKeywords.findIndex(x=>x.id==='${id}');if(i>=0)State.data.brandKeywords.splice(i,1);save();renderMarketingTracking('keyword');toast('已删除')})">删除</button><span class="flex1"></span>`:''}
+    <button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveKw('${id||''}')">保存</button>`);
+}
+function saveKw(id){
+  const f=readForm([{k:'keyword'},{k:'platform'},{k:'date'},{k:'index',type:'number'},{k:'notes'}]);
+  if(!f.keyword){toast('请填写关键词','warn');return;}
+  if(!State.data.brandKeywords) State.data.brandKeywords=[];
+  if(id){const i=State.data.brandKeywords.findIndex(x=>x.id===id);if(i>=0)State.data.brandKeywords[i]=Object.assign({},State.data.brandKeywords[i],f);}
+  else State.data.brandKeywords.push({id:uid('kw'),...f});
+  save();closeModal();renderMarketingTracking('keyword');toast('已保存');
 }
 function mktForm(id){
   const arr=State.data.marketingTracking||(State.data.marketingTracking=[]);
@@ -2888,7 +3099,7 @@ function saveCD(id){
 }
 
 /* ============ TALENT ============ */
-function renderTalent(){
+function renderTalent(tab){
   if(!State.talentUnlocked){
     $('#main').innerHTML=`<div class="page-head"><div><div class="page-title">人才管理</div><div class="page-sub">团队成员档案</div></div></div>
       <div class="lockbox"><div style="font-size:40px;margin-bottom:16px;">⊹</div><div class="page-title" style="margin-bottom:8px;">人才数据已锁定</div>
@@ -2897,14 +3108,25 @@ function renderTalent(){
         <button class="btn" onclick="unlockTalent()">解锁查看</button></div>`;
     return;
   }
+  tab=tab||State.talentTab||'roster';
+  State.talentTab=tab;
   const emps=State.data.employees||[];
-  const active=emps.filter(e=>e.status==='在岗');
+  const active=emps.filter(e=>e.status==='在岗'||e.status==='试用期');
   const avgPersonalAll=avg(active.map(e=>avgPersonal(e)));
   const avgPositionAll=avg(active.map(e=>avgPosition(e)));
+  const personalDims=['执行力','创新力','沟通力','领导力','专业力'];
+
+  // team capability gap: average score per dimension across active members
+  const teamPersonalAvg=personalDims.map(d=>avg(active.map(e=>Number(e.personal?.[d])||0)));
+  const minScore=Math.min(...teamPersonalAvg);
+  const gapDim=personalDims[teamPersonalAvg.indexOf(minScore)];
+
+  // promotion analysis: score gaps vs 8/10 threshold (senior level)
+  const promotionTarget=8;
 
   $('#main').innerHTML=`
 <div class="page-head">
-  <div><div class="page-title">人才管理</div><div class="page-sub">团队成员档案与能力评估</div></div>
+  <div><div class="page-title">人才管理</div><div class="page-sub">团队能力评估 · 画像分析 · 晋升路径</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="State.talentUnlocked=false;renderTalent()">🔒 锁定</button>
     <button class="btn sm ghost" onclick="importEmployees()">导入</button>
@@ -2916,29 +3138,185 @@ function renderTalent(){
   ${statChip('在岗成员',active.length+'人','⊹','var(--lavender)','var(--lavender-ink)')}
   ${statChip('平均个人综合',fmt(avgPersonalAll)+'分','★','var(--mint)','var(--mint-ink)')}
   ${statChip('平均岗位综合',fmt(avgPositionAll)+'分','△','var(--powder)','var(--powder-ink)')}
+  ${statChip('能力缺口维度',gapDim||'—','⚠','var(--blush)','var(--blush-ink)')}
 </div>
+<div class="seg" style="margin-bottom:18px;">
+  <button class="${tab==='roster'?'on':''}" onclick="renderTalent('roster')">👤 成员档案</button>
+  <button class="${tab==='radar'?'on':''}" onclick="renderTalent('radar')">🕸 能力雷达</button>
+  <button class="${tab==='gap'?'on':''}" onclick="renderTalent('gap')">📊 能力缺口</button>
+  <button class="${tab==='promo'?'on':''}" onclick="renderTalent('promo')">🚀 晋升路径</button>
+</div>
+
+${tab==='roster'?`
 <div class="grid" style="margin-bottom:18px;">
-  ${active.map(e=>`<div class="col-4 card" style="cursor:pointer;" onclick="empForm('${e.id}')">
+  ${active.map(e=>`<div class="col-4 card" style="cursor:pointer;" onclick="empDetail('${e.id}')">
     <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
       ${avatar(e.name,'lg')}
       <div style="flex:1;"><div style="font-size:14px;font-weight:700;">${esc(e.name)}</div>
         <div style="font-size:12px;color:var(--muted);margin-top:2px;">${esc(e.role)} · ${esc(e.dept)}</div>
         ${statusPill(e.status)}
       </div>
+      <button class="btn xs ghost" onclick="event.stopPropagation();empForm('${e.id}')">✎</button>
     </div>
-    <div style="display:flex;gap:12px;">
+    <div style="display:flex;gap:12px;margin-bottom:10px;">
       <div style="flex:1;background:var(--bg);border-radius:10px;padding:9px;text-align:center;">
         <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">个人综合</div>
-        <div style="font-family:var(--font-d);font-size:18px;font-weight:700;">${fmt(avgPersonal(e))}</div>
+        <div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:${avgPersonal(e)>=7?'var(--green-ink)':avgPersonal(e)>=5?'var(--amber)':'var(--red)'};">${fmt(avgPersonal(e))}</div>
       </div>
       <div style="flex:1;background:var(--bg);border-radius:10px;padding:9px;text-align:center;">
         <div style="font-size:10px;color:var(--muted);margin-bottom:3px;">岗位综合</div>
-        <div style="font-family:var(--font-d);font-size:18px;font-weight:700;">${fmt(avgPosition(e))}</div>
+        <div style="font-family:var(--font-d);font-size:18px;font-weight:700;color:${avgPosition(e)>=7?'var(--green-ink)':avgPosition(e)>=5?'var(--amber)':'var(--red)'};">${fmt(avgPosition(e))}</div>
       </div>
     </div>
-  </div>`).join('')||`<div class="col-12 card">${emptyState('⊹','暂无成员','')}</div>`}
+    <div style="display:flex;gap:4px;flex-wrap:wrap;">
+      ${personalDims.map(d=>{const s=Number(e.personal?.[d])||0;const clr=s>=8?'var(--mint)':s>=6?'var(--powder)':s>=4?'var(--cream)':'var(--blush)';return `<span style="background:${clr};border-radius:6px;padding:2px 7px;font-size:10.5px;font-weight:600;">${d} ${s}</span>`;}).join('')}
+    </div>
+  </div>`).join('')||`<div class="col-12 card">${emptyState('⊹','暂无在岗成员','点击右上角新增成员')}</div>`}
 </div>
-${emps.filter(e=>e.status==='离职').length?`<div class="card"><div class="card-t" style="color:var(--muted);">已离职成员<span class="ct-sub">${emps.filter(e=>e.status==='离职').length}人</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>姓名</th><th>职位</th><th>状态</th><th></th></tr></thead><tbody>${emps.filter(e=>e.status==='离职').map(e=>`<tr><td style="font-weight:500;">${esc(e.name)}</td><td>${esc(e.role)}</td><td>${statusPill(e.status)}</td><td><button class="btn xs ghost" onclick="empForm('${e.id}')">✎</button></td></tr>`).join('')}</tbody></table></div></div>`:''}`;
+${emps.filter(e=>e.status==='离职').length?`<div class="card"><div class="card-t" style="color:var(--muted);">已离职成员<span class="ct-sub">${emps.filter(e=>e.status==='离职').length}人</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>姓名</th><th>职位</th><th>状态</th><th></th></tr></thead><tbody>${emps.filter(e=>e.status==='离职').map(e=>`<tr><td style="font-weight:500;">${esc(e.name)}</td><td>${esc(e.role)}</td><td>${statusPill(e.status)}</td><td><button class="btn xs ghost" onclick="empForm('${e.id}')">✎</button></td></tr>`).join('')}</tbody></table></div></div>`:''}
+
+`:tab==='radar'?`
+<div class="grid" style="margin-bottom:18px;">
+  <div class="col-6 card">
+    <div class="card-t">团队整体画像雷达（个人素质均值）</div>
+    <div style="height:280px;"><canvas id="teamRadarChart"></canvas></div>
+  </div>
+  <div class="col-6 card">
+    <div class="card-t">个人雷达图
+      <span class="ct-sub"><select id="empSelect" class="select" style="width:auto;border-radius:20px;padding:4px 10px;font-size:12px;" onchange="renderEmpRadar()">
+        ${active.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}
+      </select></span>
+    </div>
+    <div style="height:280px;"><canvas id="empRadarChart"></canvas></div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-t">全员个人素质对比热力表</div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>成员</th><th>职位</th>${personalDims.map(d=>`<th>${d}</th>`).join('')}<th>综合</th></tr></thead><tbody>
+    ${active.map(e=>`<tr>
+      <td><div class="av-row">${avatar(e.name,'sm')}<span style="font-weight:600;">${esc(e.name)}</span></div></td>
+      <td style="font-size:12px;color:var(--muted);">${esc(e.role)}</td>
+      ${personalDims.map(d=>{const s=Number(e.personal?.[d])||0;const bg=s>=8?'#dcf3e3':s>=6?'#dbe7f8':s>=4?'#faf0d8':'#fbdde4';return `<td style="text-align:center;background:${bg};font-family:var(--font-m);font-weight:700;">${s}</td>`;}).join('')}
+      <td style="text-align:center;font-family:var(--font-m);font-weight:700;">${fmt(avgPersonal(e))}</td>
+    </tr>`).join('')||`<tr><td colspan="${personalDims.length+3}">${emptyState('⊹','暂无成员','')}</td></tr>`}
+  </tbody></table></div>
+</div>
+
+`:tab==='gap'?`
+<div class="grid" style="margin-bottom:18px;">
+  <div class="col-6 card">
+    <div class="card-t">团队能力缺口分析</div>
+    <div style="height:280px;"><canvas id="gapRadarChart"></canvas></div>
+  </div>
+  <div class="col-6 card">
+    <div class="card-t">维度得分分布</div>
+    <div style="display:flex;flex-direction:column;gap:12px;padding:8px 0;">
+      ${personalDims.map((d,i)=>{
+        const score=teamPersonalAvg[i];
+        const isWeak=score<6;
+        const clr=isWeak?'var(--red)':score>=8?'var(--green-ink)':'var(--amber)';
+        const bg=isWeak?'var(--red-pale)':score>=8?'var(--green-pale)':'var(--amber-pale)';
+        return `<div style="background:${bg};border-radius:10px;padding:10px 14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:13px;font-weight:700;">${d}</span>
+            <span style="font-family:var(--font-m);font-weight:700;color:${clr};">${fmt(score)}/10 ${isWeak?'⚠ 弱项':score>=8?'✓ 优势':''}</span>
+          </div>
+          <div style="height:7px;background:rgba(0,0,0,.07);border-radius:99px;overflow:hidden;"><div style="height:100%;width:${score*10}%;background:${clr};border-radius:99px;"></div></div>
+          ${isWeak?`<div style="font-size:11px;color:${clr};margin-top:5px;">建议：针对性培训或补充该方向专业人才</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+</div>
+<div class="card">
+  <div class="card-t">个人弱项预警</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;">
+    ${active.map(e=>{
+      const weakDims=personalDims.filter(d=>(Number(e.personal?.[d])||0)<5);
+      if(!weakDims.length) return '';
+      return `<div style="background:var(--red-pale);border:1.5px solid #fad1d1;border-radius:12px;padding:12px;">
+        <div class="av-row" style="margin-bottom:8px;">${avatar(e.name,'sm')}<span style="font-weight:700;">${esc(e.name)}</span><span style="font-size:11px;color:var(--muted);">${esc(e.role)}</span></div>
+        <div style="font-size:11px;color:var(--red);">弱项：${weakDims.join('、')}</div>
+      </div>`;
+    }).filter(Boolean).join('')||`<div class="muted" style="padding:20px;font-size:12px;grid-column:1/-1;text-align:center;">🎉 团队所有成员均无明显弱项（<5分）</div>`}
+  </div>
+</div>
+
+`:/* promo */ `
+<div style="background:var(--lavender);border-radius:var(--r);padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--lavender-ink);">
+  <strong>晋升目标评估标准</strong>：个人素质各维度 ≥ ${promotionTarget}分 且 岗位能力综合 ≥ ${promotionTarget}分 视为达到高级职位晋升条件
+</div>
+<div class="grid">
+  ${active.map(e=>{
+    const personalGaps=personalDims.filter(d=>(Number(e.personal?.[d])||0)<promotionTarget).map(d=>({dim:d,score:Number(e.personal?.[d])||0,gap:promotionTarget-(Number(e.personal?.[d])||0)}));
+    const posScores=e.position_scores||{};
+    const posKeys=Object.keys(posScores);
+    const posGaps=posKeys.filter(k=>(Number(posScores[k])||0)<promotionTarget).map(k=>({dim:k,score:Number(posScores[k])||0,gap:promotionTarget-(Number(posScores[k])||0)}));
+    const totalGap=personalGaps.reduce((s,g)=>s+g.gap,0)+posGaps.reduce((s,g)=>s+g.gap,0);
+    const readyLevel=totalGap===0?'晋升就绪':totalGap<=5?'接近晋升':totalGap<=15?'发展中':'待培养';
+    const levelClr=totalGap===0?'var(--green-ink)':totalGap<=5?'var(--mint-ink)':totalGap<=15?'var(--amber)':'var(--red)';
+    const levelBg=totalGap===0?'var(--mint)':totalGap<=5?'var(--green-pale)':totalGap<=15?'var(--cream)':'var(--blush)';
+    return `<div class="col-6 card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        ${avatar(e.name,'lg')}
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;">${esc(e.name)}</div>
+          <div style="font-size:12px;color:var(--muted);">${esc(e.role)}</div>
+        </div>
+        <span style="background:${levelBg};color:${levelClr};border-radius:var(--r-pill);padding:4px 12px;font-size:12px;font-weight:700;">${readyLevel}</span>
+      </div>
+      ${totalGap===0?`<div style="background:var(--mint);border-radius:10px;padding:10px;font-size:12px;color:var(--mint-ink);font-weight:600;">✅ 所有维度已达高级水平，建议推进晋升评估流程</div>`:
+      `<div style="font-size:12px;font-weight:700;color:var(--ink-2);margin-bottom:8px;">需提升项（距 ${promotionTarget}分 目标）：</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${[...personalGaps,...posGaps].map(g=>`<div style="display:flex;align-items:center;gap:10px;">
+          <span style="font-size:12px;flex:1;">${g.dim}</span>
+          <span style="font-family:var(--font-m);font-size:11px;color:var(--muted);">${g.score} → ${promotionTarget}</span>
+          <span style="font-size:11px;color:var(--red);font-weight:700;">缺 ${g.gap}分</span>
+          <div style="width:60px;height:5px;background:var(--bg);border-radius:99px;overflow:hidden;"><div style="height:100%;width:${g.score*10}%;background:${g.gap<=2?'var(--amber)':'var(--red)'};border-radius:99px;"></div></div>
+        </div>`).join('')}
+      </div>
+      <div style="margin-top:12px;background:var(--bg);border-radius:10px;padding:10px;font-size:11.5px;color:var(--ink-2);">
+        <strong>建议路径：</strong>${personalGaps.length?`重点提升 ${personalGaps.sort((a,b)=>b.gap-a.gap)[0].dim}，建议通过项目实战/内训/外部课程。`:'个人素质已达标，'} ${posGaps.length?`岗位能力中 ${posGaps.sort((a,b)=>b.gap-a.gap)[0].dim} 需加强，可通过承担更高难度项目积累。`:'岗位能力已达标。'} 预计 ${Math.ceil(totalGap/3)} 个月内可具备晋升条件。
+      </div>`}
+    </div>`;
+  }).join('')||`<div class="col-12 card">${emptyState('⊹','暂无成员','')}</div>`}
+</div>`}`;
+
+  setTimeout(()=>{
+    if(tab==='radar'&&active.length){
+      // team radar
+      radarChart('teamRadarChart',personalDims,[
+        {label:'团队均值',data:teamPersonalAvg,borderColor:'#101014',backgroundColor:'rgba(16,16,20,.08)'},
+        {label:'优秀基准(8)',data:personalDims.map(()=>8),borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.06)'}
+      ]);
+      // individual radar - first employee
+      const sel=$('#empSelect');
+      if(sel) renderEmpRadar();
+    } else if(tab==='gap'&&active.length){
+      radarChart('gapRadarChart',personalDims,[
+        {label:'团队均值',data:teamPersonalAvg,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.1)'},
+        {label:'目标水平(8)',data:personalDims.map(()=>8),borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.05)'},
+        {label:'达标线(6)',data:personalDims.map(()=>6),borderColor:'#f59e0b',backgroundColor:'transparent'}
+      ]);
+    }
+  },50);
+}
+function renderEmpRadar(){
+  const id=$('#empSelect')?.value; if(!id) return;
+  const e=(State.data.employees||[]).find(x=>x.id===id); if(!e) return;
+  const dims=['执行力','创新力','沟通力','领导力','专业力'];
+  const scores=dims.map(d=>Number(e.personal?.[d])||0);
+  const posKeys=Object.keys(e.position_scores||{});
+  const allDims=[...dims,...posKeys];
+  const allScores=[...scores,...posKeys.map(k=>Number(e.position_scores?.[k])||0)];
+  radarChart('empRadarChart',allDims,[
+    {label:esc(e.name),data:allScores,borderColor:'#6d5bb8',backgroundColor:'rgba(109,91,184,.12)'},
+    {label:'优秀基准',data:allDims.map(()=>8),borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.05)'}
+  ]);
+}
+function empDetail(id){
+  const e=(State.data.employees||[]).find(x=>x.id===id); if(!e) return;
+  empForm(id);
 }
 function unlockTalent(){ const v=$('#talentPwd').value; if(v){State.talentUnlocked=true;renderTalent();}else toast('请输入解锁码','warn'); }
 function importEmployees(){
@@ -3178,6 +3556,30 @@ function buildAIContext(){
   return lines.join('\n');
 }
 
+function openTeamEntry(){
+  openModal('团队填报入口','TEAM DATA ENTRY',`
+<div style="margin-bottom:10px;font-size:12px;color:var(--muted);">选择需要更新数据的模块，快速进入填报界面</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+  ${[
+    {icon:'📋',label:'任务进度更新',desc:'更新任务状态和进度',action:"closeModal();go('tasks');setTimeout(()=>document.querySelector('.btn.sm')?.click(),300)"},
+    {icon:'💰',label:'预算费用录入',desc:'提交报销或费用记录',action:"closeModal();go('budget');setTimeout(()=>{const btns=document.querySelectorAll('.btn.sm');btns[btns.length-1]?.click();},300)"},
+    {icon:'📣',label:'Campaign数据',desc:'更新推广活动数据',action:"closeModal();go('campaigns');setTimeout(()=>document.querySelector('.btn.sm:last-child')?.click(),300)"},
+    {icon:'🔍',label:'品牌搜索指数',desc:'录入各平台搜索数据',action:"closeModal();renderMarketingTracking('keyword');setTimeout(()=>kwForm(),300)"},
+    {icon:'⭐',label:'KOL合作记录',desc:'新增或更新达人合作',action:"closeModal();go('kol');setTimeout(()=>kolForm(),300)"},
+    {icon:'📅',label:'日历事件',desc:'添加会议/活动/排期',action:"closeModal();go('calendar');setTimeout(()=>calForm(),300)"},
+    {icon:'📊',label:'KPI当前值',desc:'更新品牌KPI完成情况',action:"closeModal();renderStrategy();setTimeout(()=>manageKPI(),300)"},
+    {icon:'🏪',label:'竞品动态',desc:'录入竞品最新信息',action:"closeModal();go('competitor');setTimeout(()=>competitorForm(),300)"},
+  ].map(item=>`<button class="btn ghost" style="flex-direction:column;align-items:flex-start;gap:5px;padding:14px;border-radius:14px;height:auto;" onclick="${item.action}">
+    <div style="font-size:18px;">${item.icon}</div>
+    <div style="font-size:13px;font-weight:700;">${item.label}</div>
+    <div style="font-size:11px;color:var(--muted);font-weight:400;">${item.desc}</div>
+  </button>`).join('')}
+</div>
+<div style="margin-top:14px;background:var(--bg);border-radius:12px;padding:12px;font-size:12px;color:var(--muted);">
+  💡 <strong>局域网提示：</strong>如果系统运行在局域网服务器上，团队成员可直接通过浏览器访问填写数据，数据实时同步。
+</div>`,
+  `<button class="btn ghost" onclick="closeModal()">关闭</button>`);
+}
 function openSettings(){
   const key=localStorage.getItem('ai_api_key')||'';
   openModal('系统设置','SETTINGS',`
