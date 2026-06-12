@@ -850,6 +850,12 @@ function seedData(){
       {id:'cal8',title:'Q3品牌焕新Campaign启动',date:d(15),endDate:d(75),color:'#6d5bb8',type:'Campaign',channel:'全渠道'},
       {id:'cal9',title:'儿科医生合作科普视频',date:d(5),endDate:d(5),color:'#c2466f',type:'KOL',channel:'微博/抖音'},
       {id:'cal10',title:'小红书618收官盘点',date:d(6),endDate:d(6),color:'#2c8a55',type:'内容',channel:'小红书'},
+    ],
+    myTodos:[
+      {id:'td1',text:'确认618收官数据口径，下午4点前给到总经理',done:false,date:d(0),pinned:true},
+      {id:'td2',text:'回复戴可思竞品分析邮件',done:false,date:d(0),pinned:false},
+      {id:'td3',text:'审批KOL创作营场地合同',done:false,date:d(0),pinned:false},
+      {id:'td4',text:'和供应链确认Q3新品备货MOQ',done:true,date:d(0),pinned:false},
     ]
   };
 }
@@ -867,42 +873,334 @@ function weekLabel(ws){
   return `${d.getMonth()+1}/${d.getDate()} – ${e.getMonth()+1}/${e.getDate()}`;
 }
 
-/* ============ Navigation ============ */
+/* ════════════════════════════════════════════════════════
+   我的工作台 — 品牌负责人每日工作首页
+   ════════════════════════════════════════════════════════ */
+function renderWorkbench(){
+  const d = State.data;
+  const now = new Date();
+  const today = todayStr();
+  const hr = now.getHours();
+  const greet = hr<12?'早上好':hr<18?'下午好':'晚上好';
+  const todos = d.myTodos||(d.myTodos=[]);
+  const openTodos = todos.filter(t=>!t.done).sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));
+  const doneTodos = todos.filter(t=>t.done);
+
+  // 我负责跟进的：进行中 + 审核中任务、待处理跨部门
+  const followTasks = (d.tasks||[]).filter(t=>['进行中','审核中'].includes(t.status)).slice(0,8);
+  const overdue = (d.tasks||[]).filter(t=>t.status!=='已完成'&&t.status!=='已取消'&&t.dueDate&&t.dueDate<today);
+
+  // 今日/近3日日程
+  const in3=new Date(Date.now()+3*86400000).toISOString().slice(0,10);
+  const upcoming = (d.calendarItems||[]).filter(it=>{
+    const s=it.date||'', e=it.endDate||it.date||'';
+    return (s<=in3 && e>=today);
+  }).sort((a,b)=>(a.date||'').localeCompare(b.date||'')).slice(0,6);
+
+  // 智能提醒
+  const alerts=[];
+  if(overdue.length) alerts.push({tone:'red',icon:'⚠',text:`${overdue.length} 项任务已逾期`,go:'tasks'});
+  const expSoon=(d.kol||[]).filter(k=>k.status==='合作中'&&k.contractEnd&&k.contractEnd>=today&&k.contractEnd<=new Date(Date.now()+14*86400000).toISOString().slice(0,10));
+  if(expSoon.length) alerts.push({tone:'amber',icon:'★',text:`${expSoon.length} 位KOL合同将在14天内到期：${expSoon.map(k=>k.name).join('、')}`,go:'kol'});
+  const bd=d.budgetData||{};
+  (bd.categories||[]).forEach(c=>{
+    const sp=(bd.expenses||[]).filter(e=>e.category===c.name).reduce((s,e)=>s+(Number(e.amount)||0),0);
+    if(c.allocated&&sp/c.allocated>=0.9) alerts.push({tone:'red',icon:'◌',text:`「${c.name}」预算已用 ${Math.round(sp/c.allocated*100)}%，接近上限`,go:'budget'});
+  });
+  const pendingPay=(bd.expenses||[]).filter(e=>e.status==='待付款');
+  if(pendingPay.length) alerts.push({tone:'amber',icon:'◌',text:`${pendingPay.length} 笔费用待付款，合计 ¥${wan(pendingPay.reduce((s,e)=>s+(Number(e.amount)||0),0))}万`,go:'budget'});
+  const pendingCD=(d.crossDept||[]).filter(r=>r.status==='待处理');
+  if(pendingCD.length) alerts.push({tone:'blue',icon:'⊃',text:`${pendingCD.length} 条跨部门需求待处理`,go:'cross-dept'});
+
+  // 数据速览
+  const spent=(bd.expenses||[]).reduce((s,e)=>s+(Number(e.amount)||0),0);
+  const activeCamp=(d.campaigns||[]).filter(c=>c.status==='进行中');
+  const wkTasks=(d.tasks||[]).filter(t=>t.weekOf===getWeekStr(now));
+  const wkDone=wkTasks.filter(t=>t.status==='已完成');
+
+  $('#main').innerHTML=`
+<div class="page-head">
+  <div><div class="page-title">${greet} 👋</div><div class="page-sub">${now.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'})} · 今天有 ${openTodos.length} 件待办、${followTasks.length} 项任务在跟进</div></div>
+  <div class="page-actions">
+    <button class="btn sm ghost" onclick="go('smart-report')">◇ 生成周报</button>
+    <button class="btn sm" onclick="go('tasks')">查看团队看板 →</button>
+  </div>
+</div>
+
+${alerts.length?`<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
+  ${alerts.slice(0,4).map(a=>`<div onclick="go('${a.go}')" style="display:flex;align-items:center;gap:10px;background:${a.tone==='red'?'var(--red-pale)':a.tone==='amber'?'var(--amber-pale)':'var(--powder)'};border-radius:13px;padding:11px 16px;font-size:13px;cursor:pointer;font-weight:500;color:${a.tone==='red'?'#9b1c1c':a.tone==='amber'?'#92610c':'var(--powder-ink)'};">
+    <span>${a.icon}</span><span style="flex:1;">${esc(a.text)}</span><span style="opacity:.6;">处理 →</span></div>`).join('')}
+</div>`:''}
+
+<div class="grid" style="margin-bottom:18px;">
+  <!-- 今日待办 -->
+  <div class="col-5 card">
+    <div class="card-t">今日待办<span class="ct-sub">${openTodos.length} 件未完成</span></div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input class="input" id="quickTodo" placeholder="输入待办，回车即记下…" style="flex:1;" onkeydown="if(event.key==='Enter')addQuickTodo()">
+      <button class="btn sm" onclick="addQuickTodo()">添加</button>
+    </div>
+    ${openTodos.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);">
+      <input type="checkbox" class="batch-check" onchange="toggleTodo('${t.id}')">
+      <span style="flex:1;font-size:13px;${t.pinned?'font-weight:700;':''}">${t.pinned?'📌 ':''}${esc(t.text)}</span>
+      <button class="btn xs ghost" onclick="pinTodo('${t.id}')" title="置顶">${t.pinned?'▼':'▲'}</button>
+      <button class="btn xs ghost" onclick="delTodo('${t.id}')" title="删除">✕</button>
+    </div>`).join('')||'<div class="muted" style="text-align:center;padding:16px 0;font-size:12.5px;">今天还没有待办，输入一条试试</div>'}
+    ${doneTodos.length?`<div style="margin-top:10px;">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">已完成 ${doneTodos.length} 件</div>
+      ${doneTodos.slice(0,4).map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:5px 4px;font-size:12.5px;color:var(--muted);text-decoration:line-through;">
+        <input type="checkbox" class="batch-check" checked onchange="toggleTodo('${t.id}')"><span style="flex:1;">${esc(t.text)}</span>
+        <button class="btn xs ghost" onclick="delTodo('${t.id}')">✕</button></div>`).join('')}
+      ${doneTodos.length>4?`<button class="btn xs ghost" onclick="clearDoneTodos()" style="margin-top:6px;">清空已完成</button>`:''}
+    </div>`:''}
+  </div>
+
+  <!-- 我在跟进 -->
+  <div class="col-4 card">
+    <div class="card-t">跟进中的任务<span class="ct-sub">进行中+审核中</span></div>
+    ${followTasks.map(t=>`<div style="display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="go('tasks')">
+      ${prioPill(t.priority||'P2')}
+      <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t.title)}</div>
+        <div style="font-size:11px;color:var(--muted);">${esc(t.assignee||'')}${t.dueDate?' · 截止 '+t.dueDate:''}</div></div>
+      ${statusPill(t.status)}
+    </div>`).join('')||'<div class="muted" style="text-align:center;padding:20px 0;font-size:12.5px;">暂无进行中任务</div>'}
+    <button class="btn sm ghost" style="width:100%;margin-top:12px;justify-content:center;" onclick="go('tasks');setTimeout(()=>document.getElementById('btnNewTask')?.click(),80)">+ 给团队派任务</button>
+  </div>
+
+  <!-- 近期日程 -->
+  <div class="col-3 card">
+    <div class="card-t">近3日日程</div>
+    ${upcoming.map(it=>{
+      const isToday=(it.date<=today&&(it.endDate||it.date)>=today);
+      return `<div style="display:flex;gap:9px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer;" onclick="go('calendar')">
+        <div style="width:4px;border-radius:3px;background:${it.color||'#888'};flex-shrink:0;"></div>
+        <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(it.title)}</div>
+        <div style="font-size:10.5px;color:var(--muted);">${isToday?'<strong style="color:var(--green-ink);">今天</strong>':esc(it.date)} · ${esc(it.channel||it.type||'')}</div></div>
+      </div>`;
+    }).join('')||'<div class="muted" style="text-align:center;padding:20px 0;font-size:12.5px;">近3日无日程安排</div>'}
+    <button class="btn sm ghost" style="width:100%;margin-top:12px;justify-content:center;" onclick="go('calendar')">查看完整日历 →</button>
+  </div>
+</div>
+
+<!-- 数据速览条 -->
+<div class="card dark" style="display:flex;align-items:center;gap:0;padding:18px 8px;flex-wrap:wrap;">
+  ${[
+    {l:'本周任务完成',v:`${wkDone.length}/${wkTasks.length}`,go:'tasks'},
+    {l:'预算已用',v:`${bd.annual?Math.round(spent/bd.annual*100):0}%`,go:'budget'},
+    {l:'进行中Campaign',v:activeCamp.length+'个',go:'campaigns'},
+    {l:'本月费用',v:'¥'+wan((bd.expenses||[]).filter(e=>(e.date||'').slice(0,7)===today.slice(0,7)).reduce((s,e)=>s+(Number(e.amount)||0),0),0)+'万',go:'budget'},
+    {l:'合作中KOL',v:(d.kol||[]).filter(k=>k.status==='合作中').length+'位',go:'kol'},
+  ].map(x=>`<div onclick="go('${x.go}')" style="flex:1;min-width:120px;text-align:center;cursor:pointer;padding:4px 8px;border-right:1px solid #2a2a30;">
+    <div style="font-family:var(--font-d);font-size:22px;font-weight:700;color:var(--green);">${x.v}</div>
+    <div style="font-size:11px;color:#8a8a93;margin-top:3px;">${x.l}</div>
+  </div>`).join('')}
+  <div style="flex:1;min-width:140px;text-align:center;padding:4px 8px;">
+    <button class="btn green sm" onclick="go('dashboard')">查看数据总览 →</button>
+  </div>
+</div>`;
+}
+function addQuickTodo(){
+  const el=$('#quickTodo'); const text=(el?.value||'').trim();
+  if(!text){toast('请输入待办内容','warn');return;}
+  if(!State.data.myTodos) State.data.myTodos=[];
+  State.data.myTodos.unshift({id:uid('td'),text,done:false,date:todayStr(),pinned:false});
+  save(); renderWorkbench();
+  setTimeout(()=>$('#quickTodo')?.focus(),50);
+}
+function toggleTodo(id){
+  const t=(State.data.myTodos||[]).find(x=>x.id===id); if(!t) return;
+  t.done=!t.done; save(); renderWorkbench();
+}
+function pinTodo(id){
+  const t=(State.data.myTodos||[]).find(x=>x.id===id); if(!t) return;
+  t.pinned=!t.pinned; save(); renderWorkbench();
+}
+function delTodo(id){
+  const i=(State.data.myTodos||[]).findIndex(x=>x.id===id);
+  if(i>=0){State.data.myTodos.splice(i,1);save();renderWorkbench();}
+}
+function clearDoneTodos(){
+  State.data.myTodos=(State.data.myTodos||[]).filter(t=>!t.done);
+  save();renderWorkbench();toast('已清空');
+}
+
+/* ════════════════════════════════════════════════════════
+   智能 Excel 导入引擎
+   - 模板下载为真正的 .xlsx（带示例数据行）
+   - 按表头名称匹配（不依赖列顺序），支持常见同义词
+   - 自动识别 Excel 日期序列号、2026/6/12、6月12日 等格式
+   - 金额自动去掉 ¥、千分号，识别"万"单位
+   - 导入前预览前5行映射结果，错误行明确提示
+   ════════════════════════════════════════════════════════ */
+function normHeader(h){ return String(h||'').replace(/[\s*＊:：()（）\/]/g,'').toLowerCase(); }
+
+function coerceDate(v){
+  if(v===null||v===undefined||v==='') return '';
+  if(v instanceof Date && !isNaN(v)) return v.toISOString().slice(0,10);
+  if(typeof v==='number'){ // Excel 日期序列号
+    if(v>20000&&v<60000){ const dt=new Date(Math.round((v-25569)*86400*1000)); if(!isNaN(dt)) return dt.toISOString().slice(0,10); }
+    return '';
+  }
+  let s=String(v).trim();
+  // 2026年6月12日 / 6月12日
+  let m=s.match(/^(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日?$/);
+  if(m){ const y=m[1]||new Date().getFullYear(); return `${y}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`; }
+  // 2026/6/12, 2026-6-12, 2026.6.12
+  m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  // 6/12/26 或 6/12/2026 (美式，Excel raw:false 常见输出)
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){ let y=Number(m[3]); if(y<100) y+=2000; return `${y}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`; }
+  const dt=new Date(s); if(!isNaN(dt)) return dt.toISOString().slice(0,10);
+  return '';
+}
+
+function coerceNumber(v){
+  if(v===null||v===undefined||v==='') return 0;
+  if(typeof v==='number') return v;
+  let s=String(v).replace(/[¥￥,，\s元]/g,'').trim();
+  let mult=1;
+  if(/万$/.test(s)){ mult=10000; s=s.replace(/万$/,''); }
+  if(/[kK]$/.test(s)){ mult=1000; s=s.replace(/[kK]$/,''); }
+  if(/[wW]$/.test(s)){ mult=10000; s=s.replace(/[wW]$/,''); }
+  const n=parseFloat(s);
+  return isNaN(n)?0:n*mult;
+}
+
+/* cfg: {title, fields:[{key,label,aliases?,type?('date'|'number'|'text'),required?,example,options?}], onImport(items), after} */
+function smartImportFlow(cfg){
+  window.__siCfg = cfg; window.__siRows = null; window.__siItems = null;
+  openModal('导入 · '+cfg.title, 'EXCEL 导入',`
+    <div style="background:var(--green-pale);border-radius:12px;padding:12px 16px;font-size:12.5px;line-height:1.7;color:var(--green-ink);margin-bottom:14px;">
+      💡 <strong>怎么用：</strong>① 下载模板 → ② 用 Excel 填写（列顺序可以打乱，表头名对就行）→ ③ 上传文件 → ④ 核对预览 → 确认导入。<br>
+      日期写 2026/6/12 或 6月12日 都可以；金额可以带 ¥ 和逗号，"5万"也认识。
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;">
+      <button class="btn ghost" onclick="downloadXlsxTemplate()">⬇ 下载 Excel 模板</button>
+      <label class="btn" style="cursor:pointer;">⬆ 选择文件上传<input type="file" id="siFile" accept=".xlsx,.xls,.csv" style="display:none;"></label>
+    </div>
+    <div id="siPreview"></div>`,
+    `<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" id="siConfirm" disabled style="opacity:.4;" onclick="runSmartImport()">确认导入</button>`, true);
+
+  $('#siFile').onchange = ev => {
+    const file = ev.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try{
+        const wb = XLSX.read(new Uint8Array(e.target.result), {type:'array', cellDates:true});
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1, raw:true, defval:''});
+        processSmartImport(rows);
+      }catch(err){ $('#siPreview').innerHTML=`<div style="color:var(--red);font-size:13px;">文件解析失败：${esc(err.message)}</div>`; }
+    };
+    reader.readAsArrayBuffer(file);
+  };
+}
+
+function downloadXlsxTemplate(){
+  const cfg = window.__siCfg;
+  const headers = cfg.fields.map(f=>f.label+(f.required?'*':''));
+  const example = cfg.fields.map(f=>f.example!==undefined?f.example:'');
+  const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+  ws['!cols'] = cfg.fields.map(f=>({wch:Math.max(10,String(f.label).length*2+4)}));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, cfg.title);
+  XLSX.writeFile(wb, cfg.title+'导入模板.xlsx');
+}
+
+function processSmartImport(rows){
+  const cfg = window.__siCfg;
+  if(!rows||rows.length<2){ $('#siPreview').innerHTML='<div style="color:var(--red);font-size:13px;">文件为空或没有数据行（第一行应为表头）</div>'; return; }
+  const headerRow = rows[0].map(normHeader);
+  // 表头名称匹配（含同义词）
+  const colMap = {}; const missing = [];
+  cfg.fields.forEach(f=>{
+    const names=[f.label,...(f.aliases||[]),f.key].map(normHeader);
+    const idx=headerRow.findIndex(h=>h&&names.some(n=>h===n||h.includes(n)||n.includes(h)));
+    if(idx>=0) colMap[f.key]=idx;
+    else if(f.required) missing.push(f.label);
+  });
+  if(missing.length){
+    $('#siPreview').innerHTML=`<div style="background:var(--red-pale);border-radius:12px;padding:12px 16px;font-size:13px;color:#9b1c1c;">
+      ❌ 表头里找不到必填列：<strong>${missing.join('、')}</strong><br>
+      <span style="font-size:12px;">检测到的表头：${rows[0].filter(Boolean).map(esc).join(' / ')||'(空)'}<br>请下载模板对照填写，列顺序可以不同，但表头文字要对得上。</span></div>`;
+    return;
+  }
+  const dataRows = rows.slice(1).filter(r=>r.some(c=>String(c).trim()!==''));
+  const items=[]; const errors=[];
+  dataRows.forEach((r,ri)=>{
+    const obj={}; const rowErr=[];
+    cfg.fields.forEach(f=>{
+      let v = colMap[f.key]!==undefined ? r[colMap[f.key]] : '';
+      if(f.type==='date'){ const dv=coerceDate(v); if(v!==''&&v!==undefined&&dv==='') rowErr.push(`${f.label}「${v}」不是有效日期`); v=dv; }
+      else if(f.type==='number') v=coerceNumber(v);
+      else v=String(v==null?'':v).trim();
+      if(f.required && (v===''||v===undefined)) rowErr.push(`${f.label}不能为空`);
+      if(f.options && v && !f.options.includes(v)){ v=f.options[0]; } // 容错：选项外的值取默认
+      obj[f.key]=v;
+    });
+    if(rowErr.length) errors.push({row:ri+2, msgs:rowErr});
+    else items.push(obj);
+  });
+  window.__siItems = items;
+  const previewFields = cfg.fields.slice(0,6);
+  $('#siPreview').innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap;">
+      <span class="pill green">可导入 ${items.length} 行</span>
+      ${errors.length?`<span class="pill red">${errors.length} 行有问题（将跳过）</span>`:''}
+    </div>
+    ${items.length?`<div class="tbl-wrap" style="max-height:200px;"><table class="tbl"><thead><tr>${previewFields.map(f=>`<th>${esc(f.label)}</th>`).join('')}</tr></thead><tbody>
+      ${items.slice(0,5).map(it=>`<tr>${previewFields.map(f=>`<td style="font-size:12px;">${esc(f.type==='number'?fmtN(it[f.key]):it[f.key])}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>${items.length>5?`<div style="font-size:11px;color:var(--muted);margin-top:5px;">…仅预览前5行，共${items.length}行</div>`:''}`:''}
+    ${errors.length?`<div style="background:var(--amber-pale);border-radius:12px;padding:10px 14px;font-size:12px;color:#92610c;margin-top:10px;max-height:120px;overflow:auto;">
+      ${errors.slice(0,8).map(e=>`第${e.row}行：${e.msgs.join('；')}`).join('<br>')}${errors.length>8?`<br>…共${errors.length}行有问题`:''}</div>`:''}`;
+  const btn=$('#siConfirm');
+  if(items.length){ btn.disabled=false; btn.style.opacity='1'; } else { btn.disabled=true; btn.style.opacity='.4'; }
+}
+
+function runSmartImport(){
+  const cfg=window.__siCfg; const items=window.__siItems;
+  if(!items||!items.length){toast('没有可导入的数据','warn');return;}
+  cfg.onImport(items); save(); closeModal();
+  if(cfg.after) cfg.after();
+  toast(`成功导入 ${items.length} 条数据 ✓`);
+  window.__siItems=null;
+}
+
+/* ============ Navigation（按使用频率组织：每天用的在最前） ============ */
 const NAV_GROUPS = [
-  {key:'dash', label:'驾驶舱', icon:'◈', pages:[
-    {id:'dashboard', label:'总览看板', icon:'◈', desc:'核心指标与动态'},
-    {id:'strategy', label:'战略OKR', icon:'⬡', desc:'目标与关键结果'},
-    {id:'analytics', label:'数据分析', icon:'△', desc:'多维数据洞察'},
-    {id:'smart-report', label:'智能报告', icon:'◇', desc:'自动生成周月报'}
+  {key:'work', label:'工作台', icon:'◈', pages:[
+    {id:'workbench', label:'我的工作台', icon:'◈', desc:'今日待办·日程·提醒'},
+    {id:'tasks', label:'团队看板', icon:'✓', desc:'团队任务列表与看板'},
+    {id:'calendar', label:'日程日历', icon:'▦', desc:'营销排期与活动日历'},
+    {id:'smart-report', label:'一键周报', icon:'◇', desc:'自动生成周报月报'}
   ]},
-  {key:'exec', label:'执行', icon:'✦', pages:[
-    {id:'tasks', label:'任务中心', icon:'✓', desc:'团队任务管理'},
-    {id:'calendar', label:'内容日历', icon:'▦', desc:'内容发布规划'},
+  {key:'data', label:'品牌数据', icon:'△', pages:[
+    {id:'dashboard', label:'数据总览', icon:'◈', desc:'核心指标一屏看全'},
+    {id:'budget', label:'预算费用', icon:'◌', desc:'预算执行与费用记录'},
+    {id:'marketing-tracking', label:'投放效果', icon:'▷', desc:'各渠道ROI追踪'},
+    {id:'media-plan', label:'投放计划', icon:'◑', desc:'渠道×月份预算矩阵'},
+    {id:'social-media', label:'内容数据', icon:'◐', desc:'自媒体内容表现'},
+    {id:'analytics', label:'深度分析', icon:'△', desc:'多维趋势分析'}
+  ]},
+  {key:'biz', label:'业务管理', icon:'◎', pages:[
     {id:'campaigns', label:'Campaign', icon:'◎', desc:'营销活动管理'},
     {id:'events', label:'线下活动', icon:'⊛', desc:'活动策划执行'},
-    {id:'marketing-tracking', label:'推广追踪', icon:'▷', desc:'推广效果追踪'}
-  ]},
-  {key:'channel', label:'渠道', icon:'▷', pages:[
-    {id:'kol', label:'KOL达人库', icon:'★', desc:'达人合作管理'},
-    {id:'social-media', label:'自媒体数据', icon:'◐', desc:'账号内容数据'},
-    {id:'media-plan', label:'媒体投放', icon:'◑', desc:'分渠道投放计划'},
-    {id:'vendors', label:'外部资产', icon:'⊞', desc:'供应商与外协'}
-  ]},
-  {key:'insight', label:'洞察', icon:'◎', pages:[
-    {id:'brand-assets', label:'品牌资产', icon:'◆', desc:'品牌文件与资产'},
-    {id:'consumer', label:'消费者洞察', icon:'◉', desc:'用户研究与洞察'},
+    {id:'kol', label:'KOL达人', icon:'★', desc:'达人合作管理'},
+    {id:'vendors', label:'供应商', icon:'⊞', desc:'外部合作方管理'},
     {id:'competitor', label:'竞品监测', icon:'⊙', desc:'竞品动态追踪'},
-    {id:'reports', label:'报告复盘', icon:'▣', desc:'历史报告存档'}
+    {id:'brand-assets', label:'品牌资产', icon:'◆', desc:'品牌文件素材'},
+    {id:'consumer', label:'消费者洞察', icon:'◉', desc:'用户研究存档'},
+    {id:'reports', label:'报告存档', icon:'▣', desc:'历史报告复盘'},
+    {id:'cross-dept', label:'跨部门协作', icon:'⊃', desc:'对外协作需求'}
   ]},
-  {key:'team', label:'团队', icon:'⊕', pages:[
-    {id:'cross-dept', label:'跨部门需求', icon:'⊃', desc:'协作需求管理'},
-    {id:'talent', label:'人才管理', icon:'⊹', desc:'团队成员档案'},
-    {id:'budget', label:'预算中心', icon:'◌', desc:'预算与费用管理'},
-    {id:'data-manage', label:'数据管理', icon:'⊧', desc:'导入导出备份'}
+  {key:'sys', label:'团队与系统', icon:'⊕', pages:[
+    {id:'strategy', label:'战略OKR', icon:'⬡', desc:'目标与关键结果'},
+    {id:'talent', label:'团队成员', icon:'⊹', desc:'成员档案管理'},
+    {id:'data-manage', label:'数据备份', icon:'⊧', desc:'导入导出与备份'}
   ]}
 ];
 
-State._activeGroup = 'dash';
+State._activeGroup = 'work';
 
 function renderNavGroups(){
   const inner = $('#navGroups'); if(!inner) return;
@@ -955,6 +1253,7 @@ function go(id){
 
 function render(){
   const fn = {
+    'workbench':renderWorkbench,
     'dashboard':renderDashboard,'strategy':renderStrategy,'analytics':renderAnalytics,'smart-report':renderSmartReport,
     'tasks':renderTasks,'calendar':renderCalendar,'campaigns':renderCampaigns,'events':renderEvents,'marketing-tracking':renderMarketingTracking,
     'kol':renderKOL,'social-media':renderSocialMedia,'media-plan':renderMediaPlan,'vendors':renderVendors,
@@ -966,6 +1265,7 @@ function render(){
 
 function updateAIChips(){
   const chips = {
+    'workbench':['今天我最该优先做什么？','本周有什么风险？','帮我整理今天的待办'],
     'dashboard':['本周任务完成率？','预算还剩多少？','活跃Campaign概况'],
     'tasks':['有哪些逾期任务？','本周高优先级任务？','任务分配是否均衡？'],
     'budget':['预算执行健康吗？','哪个品类超支？','下月预算建议'],
@@ -1261,7 +1561,7 @@ function renderTasks(){
     <span style="font-size:12.5px;font-weight:600;padding:0 4px;">${weekLabel(wk)}</span>
     <button class="btn sm ghost" onclick="nextWeek()">下周 ›</button>
     <div class="seg" style="margin-left:8px;"><button ${State._taskView==='list'?'class="on"':''} onclick="State._taskView='list';renderTasks()">列表</button><button ${State._taskView==='kanban'?'class="on"':''} onclick="State._taskView='kanban';renderTasks()">看板</button></div>
-    <button class="btn sm ghost" onclick="csvImportFlow({title:'任务',headers:['标题','负责人','类型','优先级','状态','截止日期','预估小时','标签'],sample:'策划周报,陈晓雯,策划,P1,进行中,2026-06-15,4,报告',rowToObj:(c)=>({id:uid('t'),title:c[0],assignee:c[1],type:c[2],priority:c[3],status:c[4]||'待开始',weekOf:wk,dueDate:c[5],estimatedHours:Number(c[6])||0,actualHours:0,tags:c[7],notes:''}),onImport(items){(State.data.tasks=State.data.tasks||[]).push(...items);},after:renderTasks})">导入</button>
+    <button class="btn sm ghost" onclick="importTasks()">导入</button>
     <button class="btn sm ghost" onclick="exportXlsx(State.data.tasks||[],['标题','负责人','类型','优先级','状态','截止日期','预估工时'],['title','assignee','type','priority','status','dueDate','estimatedHours'],'任务列表.xlsx')">导出</button>
     <button class="btn sm ghost" onclick="batchStart('tasks',renderTasks)">批量</button>
     <button class="btn sm" id="btnNewTask" onclick="taskForm()">+ 新建任务</button>
@@ -1318,6 +1618,22 @@ function renderTaskBody(all){
   }
 }
 
+function importTasks(){
+  smartImportFlow({title:'任务',fields:[
+    {key:'title',label:'任务标题',aliases:['标题','任务','任务名称','工作内容','事项'],required:true,example:'策划Q3新品上市方案'},
+    {key:'assignee',label:'负责人',aliases:['责任人','执行人','owner','姓名'],example:'陈晓雯'},
+    {key:'type',label:'类型',aliases:['任务类型','分类','类别'],example:'策划',options:['策划','内容','设计','投放','活动','KOL','分析','行政','其他']},
+    {key:'priority',label:'优先级',aliases:['级别','重要程度'],example:'P1',options:['P0','P1','P2','P3']},
+    {key:'status',label:'状态',aliases:['进度','任务状态'],example:'进行中',options:['待开始','进行中','审核中','已完成','已取消']},
+    {key:'dueDate',label:'截止日期',aliases:['截止时间','deadline','到期日','完成日期'],type:'date',example:'2026/6/20'},
+    {key:'estimatedHours',label:'预估工时',aliases:['预计工时','工时','预估小时'],type:'number',example:8},
+    {key:'tags',label:'标签',aliases:['备注标签','tag'],example:'新品,Q3'},
+  ],onImport(items){
+    const wk=State._taskWeek;
+    items.forEach(it=>{ it.id=uid('t'); it.weekOf=wk; it.actualHours=0; it.notes=''; if(!it.status)it.status='待开始'; });
+    (State.data.tasks=State.data.tasks||[]).push(...items);
+  },after:renderTasks});
+}
 function prevWeek(){ const d=new Date(State._taskWeek+'T00:00:00'); d.setDate(d.getDate()-7); State._taskWeek=d.toISOString().slice(0,10); renderTasks(); }
 function nextWeek(){ const d=new Date(State._taskWeek+'T00:00:00'); d.setDate(d.getDate()+7); State._taskWeek=d.toISOString().slice(0,10); renderTasks(); }
 
@@ -1406,7 +1722,7 @@ function renderBudget(){
 </div>
 <div class="card">
   <div class="card-t">费用记录<span class="ct-sub">${expenses.length}条</span>
-    <button class="btn xs ghost" style="margin-left:auto;" onclick="csvImportFlow({title:'费用',headers:['类别','描述','金额','日期','供应商','状态'],sample:'数字营销,小红书广告,50000,2026-06-01,小红书官方,已结算',rowToObj:(c)=>({id:uid('ex'),category:c[0],desc:c[1],amount:Number(c[2])||0,date:c[3],vendor:c[4],status:c[5]||'已结算',invoice:false}),onImport(items){(State.data.budgetData.expenses=State.data.budgetData.expenses||[]).push(...items);},after:renderBudget})">导入</button>
+    <button class="btn xs ghost" style="margin-left:auto;" onclick="importExpenses()">导入</button>
   </div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr>
     ${State.batchMod?'<th style="width:36px;"></th>':''}
@@ -1432,6 +1748,21 @@ function renderBudget(){
   },50);
 }
 function unlockBudget(){ const v=$('#budgetPwd').value; if(v==='brand2026'||v==='1234'||v){State.budgetUnlocked=true;renderBudget();}else toast('密码错误','error'); }
+function importExpenses(){
+  const cats=(State.data.budgetData?.categories||[]).map(c=>c.name);
+  smartImportFlow({title:'费用记录',fields:[
+    {key:'category',label:'费用类别',aliases:['类别','分类','科目','预算类别'],example:cats[0]||'数字营销',options:cats.length?cats:undefined},
+    {key:'desc',label:'费用描述',aliases:['描述','摘要','用途','事项','内容'],required:true,example:'小红书开屏广告投放'},
+    {key:'amount',label:'金额',aliases:['费用金额','金额元','支出','花费'],type:'number',required:true,example:'¥50,000'},
+    {key:'date',label:'日期',aliases:['费用日期','支出日期','发生日期','时间'],type:'date',example:'2026/6/12'},
+    {key:'vendor',label:'供应商',aliases:['服务商','收款方','对方单位'],example:'小红书官方'},
+    {key:'status',label:'状态',aliases:['付款状态','结算状态'],example:'已结算',options:['已结算','待付款','进行中']},
+  ],onImport(items){
+    items.forEach(it=>{ it.id=uid('ex'); it.invoice=false; if(!it.status)it.status='已结算'; if(!it.date)it.date=todayStr(); });
+    if(!State.data.budgetData) State.data.budgetData={annual:0,categories:[],expenses:[]};
+    (State.data.budgetData.expenses=State.data.budgetData.expenses||[]).push(...items);
+  },after:renderBudget});
+}
 function editAnnualBudget(){
   openModal('年度预算设置','ANNUAL BUDGET',formHTML([{k:'annual',label:'年度总预算(元)',type:'number',def:State.data.budgetData?.annual||0}],{}),
     `<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="State.data.budgetData.annual=Number($('#f_annual').value)||0;save();closeModal();renderBudget();toast('已保存')">保存</button>`);
@@ -1772,7 +2103,7 @@ function renderKOL(){
   <div class="page-actions">
     <button class="btn sm ghost" onclick="batchStart('kol',renderKOL)">批量</button>
     <button class="btn sm ghost" onclick="exportXlsx(kols,['名称','平台','类别','粉丝','费用','状态','合同截止','负责人'],['name','platform','category','fans','fee','status','contractEnd','owner'],'KOL达人库.xlsx')">导出</button>
-    <button class="btn sm ghost" onclick="csvImportFlow({title:'KOL',headers:['名称','平台','类别','粉丝数','单次费用','状态','合同截止','负责人','标签'],rowToObj:(c)=>({id:uid('k'),name:c[0],platform:c[1],category:c[2],fans:c[3],fee:Number(c[4])||0,status:c[5]||'待谈判',contractEnd:c[6],owner:c[7],tags:c[8],rating:0,notes:''}),onImport(items){(State.data.kol=State.data.kol||[]).push(...items);},after:renderKOL})">导入</button>
+    <button class="btn sm ghost" onclick="importKOL()">导入</button>
     <button class="btn sm" onclick="kolForm()">+ 新增达人</button>
   </div>
 </div>
@@ -1801,6 +2132,22 @@ function renderKOL(){
     </tr>`).join(''):`<tr><td colspan="9">${emptyState('★','暂无达人','')}</td></tr>`}
   </tbody></table></div>
 </div>`;
+}
+function importKOL(){
+  smartImportFlow({title:'KOL达人',fields:[
+    {key:'name',label:'账号名称',aliases:['达人名称','名称','达人','账号','昵称'],required:true,example:'@奶爸日记Leo'},
+    {key:'platform',label:'平台',aliases:['所在平台','渠道'],example:'小红书'},
+    {key:'category',label:'内容类别',aliases:['类别','分类','领域','赛道'],example:'母婴'},
+    {key:'fans',label:'粉丝数',aliases:['粉丝','粉丝量','粉丝规模'],example:'320万'},
+    {key:'fee',label:'单次费用',aliases:['报价','费用','合作费用','刊例价'],type:'number',example:'¥80,000'},
+    {key:'status',label:'状态',aliases:['合作状态'],example:'合作中',options:['合作中','待谈判','合作完毕','已拉黑']},
+    {key:'contractEnd',label:'合同截止',aliases:['合同到期','到期日','合同截止日期'],type:'date',example:'2026/9/30'},
+    {key:'owner',label:'负责人',aliases:['对接人','商务'],example:'吴天宇'},
+    {key:'tags',label:'标签',aliases:['备注标签'],example:'头部,亲子'},
+  ],onImport(items){
+    items.forEach(it=>{ it.id=uid('k'); it.rating=0; it.notes=''; it.lastPost=''; if(!it.status)it.status='待谈判'; });
+    (State.data.kol=State.data.kol||[]).push(...items);
+  },after:renderKOL});
 }
 function kolForm(id){
   const arr=State.data.kol||(State.data.kol=[]);
@@ -2560,7 +2907,7 @@ function renderTalent(){
   <div><div class="page-title">人才管理</div><div class="page-sub">团队成员档案与能力评估</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="State.talentUnlocked=false;renderTalent()">🔒 锁定</button>
-    <button class="btn sm ghost" onclick="csvImportFlow({title:'员工',headers:['姓名','职位','部门','状态','入职日期','邮箱','电话'],rowToObj:(c)=>({id:uid('e'),name:c[0],role:c[1],dept:c[2]||'品牌部',status:c[3]||'在岗',hireDate:c[4],email:c[5],phone:c[6],personal:{},position_scores:{}}),onImport(items){(State.data.employees=State.data.employees||[]).push(...items);normalizeEmployees();},after:renderTalent})">导入</button>
+    <button class="btn sm ghost" onclick="importEmployees()">导入</button>
     <button class="btn sm ghost" onclick="exportXlsx(emps,['姓名','职位','部门','状态','入职日期','邮箱'],['name','role','dept','status','hireDate','email'],'团队名单.xlsx')">导出</button>
     <button class="btn sm" onclick="empForm()">+ 新增成员</button>
   </div>
@@ -2594,6 +2941,21 @@ function renderTalent(){
 ${emps.filter(e=>e.status==='离职').length?`<div class="card"><div class="card-t" style="color:var(--muted);">已离职成员<span class="ct-sub">${emps.filter(e=>e.status==='离职').length}人</span></div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>姓名</th><th>职位</th><th>状态</th><th></th></tr></thead><tbody>${emps.filter(e=>e.status==='离职').map(e=>`<tr><td style="font-weight:500;">${esc(e.name)}</td><td>${esc(e.role)}</td><td>${statusPill(e.status)}</td><td><button class="btn xs ghost" onclick="empForm('${e.id}')">✎</button></td></tr>`).join('')}</tbody></table></div></div>`:''}`;
 }
 function unlockTalent(){ const v=$('#talentPwd').value; if(v){State.talentUnlocked=true;renderTalent();}else toast('请输入解锁码','warn'); }
+function importEmployees(){
+  smartImportFlow({title:'团队成员',fields:[
+    {key:'name',label:'姓名',aliases:['员工姓名','成员'],required:true,example:'陈晓雯'},
+    {key:'role',label:'职位',aliases:['岗位','职务','title'],example:'品牌总监'},
+    {key:'dept',label:'部门',aliases:['所在部门'],example:'品牌部'},
+    {key:'status',label:'状态',aliases:['在职状态','员工状态'],example:'在岗',options:['在岗','试用期','离职']},
+    {key:'hireDate',label:'入职日期',aliases:['入职时间'],type:'date',example:'2024/3/1'},
+    {key:'email',label:'邮箱',aliases:['电子邮箱','邮件','email'],example:'name@company.com'},
+    {key:'phone',label:'电话',aliases:['手机','手机号','联系电话'],example:'138-0000-0000'},
+  ],onImport(items){
+    items.forEach(it=>{ it.id=uid('e'); it.personal={}; it.position_scores={}; if(!it.status)it.status='在岗'; if(!it.dept)it.dept='品牌部'; });
+    (State.data.employees=State.data.employees||[]).push(...items);
+    normalizeEmployees();
+  },after:renderTalent});
+}
 function empForm(id){
   const arr=State.data.employees||(State.data.employees=[]);
   const e=id?arr.find(x=>x.id===id):{};
@@ -2702,7 +3064,8 @@ State._palSel=0; State._palItems=[];
 
 const ALL_PAGES=NAV_GROUPS.flatMap(g=>g.pages.map(p=>({...p,group:g.label})));
 const QUICK_ACTIONS=[
-  {id:'qa_task',label:'新建任务',icon:'✓',desc:'快速创建一条任务',action:()=>{go('tasks');setTimeout(()=>document.getElementById('btnNewTask')?.click(),80);}},
+  {id:'qa_todo',label:'记一条待办',icon:'◈',desc:'回到工作台快速记录待办',action:()=>{go('workbench');setTimeout(()=>$('#quickTodo')?.focus(),120);}},
+  {id:'qa_task',label:'新建任务',icon:'✓',desc:'给团队成员派一条任务',action:()=>{go('tasks');setTimeout(()=>document.getElementById('btnNewTask')?.click(),80);}},
   {id:'qa_expense',label:'记录费用',icon:'◌',desc:'快速记录一笔支出',action:()=>{go('budget');setTimeout(()=>document.getElementById('btnNewExpense')?.click(),80);}},
   {id:'qa_report',label:'生成周报',icon:'◇',desc:'自动生成本周工作报告',action:()=>{go('smart-report');setTimeout(generateWeeklyReport,80);}},
   {id:'qa_camp',label:'新建Campaign',icon:'◎',desc:'创建一个新的Campaign',action:()=>{go('campaigns');setTimeout(campForm,80);}},
@@ -2861,7 +3224,7 @@ async function init(){
   Storage.connectSSE && Storage.connectSSE();
   renderNavGroups();
   renderSubnav();
-  go('dashboard');
+  go('workbench');
   updateNavDot();
   updateAIChips();
   setInterval(()=>{ updateNavDot(); },60000);
