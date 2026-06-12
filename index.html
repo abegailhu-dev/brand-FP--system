@@ -15,13 +15,16 @@
   --border:#ececf0; --border-2:#e0e0e6;
   --dark:#16161a; --dark-2:#222228;
   --green:#4ade80; --green-ink:#15803d; --green-pale:#e7f9ee;
-  --lavender:#e6e1f7; --lavender-ink:#6d5bb8;
-  --blush:#fbdde4; --blush-ink:#c2466f;
-  --powder:#dbe7f8; --powder-ink:#3568b8;
-  --mint:#dcf3e3; --mint-ink:#2c8a55;
-  --cream:#faf0d8; --cream-ink:#a8842c;
-  --red:#ef4444; --red-pale:#feeaea;
-  --amber:#f59e0b; --amber-pale:#fdf3df;
+  /* VI 五色体系：黑 / 白 / 荧光绿 / 星渝色 / 栩光金 */
+  --xingyu:#4845a8; --xingyu-deep:#2d2a6e; --xingyu-mid:#7c79c4;
+  --xuguang:#b8912e; --xuguang-deep:#8c6c1a;
+  --lavender:#e9e8f8; --lavender-ink:#4845a8;
+  --blush:#d9d7f1; --blush-ink:#2d2a6e;
+  --powder:#e0def4; --powder-ink:#3c3996;
+  --mint:#dcf3e3; --mint-ink:#15803d;
+  --cream:#f7f0dc; --cream-ink:#9a7a1f;
+  --red:#4845a8; --red-pale:#e9e8f8;
+  --amber:#b8912e; --amber-pale:#f7f0dc;
   --r-sm:10px; --r:16px; --r-lg:22px; --r-pill:999px;
   --sh-sm:0 1px 3px rgba(16,16,20,.05),0 4px 14px rgba(16,16,20,.04);
   --sh-md:0 2px 6px rgba(16,16,20,.06),0 10px 30px rgba(16,16,20,.07);
@@ -107,11 +110,11 @@ input,select,textarea{font-family:var(--font);}
 .kpi .kpi-row{display:flex;align-items:flex-end;justify-content:space-between;gap:6px;}
 .trend{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:var(--r-pill);background:rgba(255,255,255,.7);font-family:var(--font-m);}
 .trend.up{color:var(--green-ink);} .trend.down{color:var(--red);}
-.kpi.lavender{background:var(--lavender);color:#2c2350;} .kpi.lavender .kpi-ic{color:var(--lavender-ink);}
-.kpi.blush{background:var(--blush);color:#511527;} .kpi.blush .kpi-ic{color:var(--blush-ink);}
-.kpi.powder{background:var(--powder);color:#142c52;} .kpi.powder .kpi-ic{color:var(--powder-ink);}
+.kpi.lavender{background:var(--lavender);color:#2d2a6e;} .kpi.lavender .kpi-ic{color:var(--lavender-ink);}
+.kpi.blush{background:var(--blush);color:#2d2a6e;} .kpi.blush .kpi-ic{color:var(--blush-ink);}
+.kpi.powder{background:var(--powder);color:#2d2a6e;} .kpi.powder .kpi-ic{color:var(--powder-ink);}
 .kpi.mint{background:var(--mint);color:#0d3320;} .kpi.mint .kpi-ic{color:var(--mint-ink);}
-.kpi.cream{background:var(--cream);color:#43330c;} .kpi.cream .kpi-ic{color:var(--cream-ink);}
+.kpi.cream{background:var(--cream);color:#5c4a14;} .kpi.cream .kpi-ic{color:var(--cream-ink);}
 
 /* ============ PILLS / AVATAR / TAGS ============ */
 .pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:var(--r-pill);font-size:11.5px;font-weight:600;white-space:nowrap;}
@@ -121,7 +124,7 @@ input,select,textarea{font-family:var(--font);}
 .pill.blue{background:var(--powder);color:var(--powder-ink);}
 .pill.purple{background:var(--lavender);color:var(--lavender-ink);}
 .pill.pink{background:var(--blush);color:var(--blush-ink);}
-.pill.amber{background:var(--amber-pale);color:#a8842c;}
+.pill.amber{background:var(--amber-pale);color:#9a7a1f;}
 .pill.red{background:var(--red-pale);color:var(--red);}
 .pill.gray{background:#eeeef1;color:var(--muted);}
 .tag{display:inline-block;padding:2px 9px;border-radius:7px;background:var(--bg);color:var(--ink-2);font-size:11px;font-weight:500;border:1px solid var(--border);}
@@ -137,7 +140,7 @@ input,select,textarea{font-family:var(--font);}
 .btn.ghost:hover{background:var(--bg);}
 .btn.green{background:var(--green);color:#06230f;}
 .btn.green:hover{background:#36d16c;}
-.btn.danger{background:#fff;color:var(--red);border:1px solid #fad1d1;}
+.btn.danger{background:#fff;color:var(--red);border:1px solid #cfcdec;}
 .btn.danger:hover{background:var(--red-pale);}
 .btn.sm{padding:6px 13px;font-size:12px;}
 .btn.xs{padding:4px 10px;font-size:11px;}
@@ -446,7 +449,7 @@ const fmt = (n,d) => (typeof n!=='number'||isNaN(n)) ? '—' : n.toFixed(d==null
 const todayStr = () => new Date().toISOString().slice(0,10);
 const uid = p => p + Date.now() + Math.floor(Math.random()*99);
 
-const AV_COLORS = ['#6d5bb8','#c2466f','#3568b8','#2c8a55','#a8842c','#b85b3a','#3a8a8c','#7a4ab8','#4a6ab0','#8c5d2c'];
+const AV_COLORS = ['#4845a8','#2d2a6e','#3c3996','#15803d','#9a7a1f','#b8912e','#15803d','#4845a8','#7c79c4','#8c6c1a'];
 function avColor(name){ let h=0; for(const c of String(name||'')) h=(h*31+c.charCodeAt(0))>>>0; return AV_COLORS[h%AV_COLORS.length]; }
 function initials(name){ if(!name) return '?'; if(String(name).startsWith('(空缺)')) return '缺'; return String(name).replace(/\s/g,'').slice(0,2); }
 function avatar(name, cls){ return `<span class="avatar ${cls||''}" style="background:${avColor(name)}" title="${esc(name)}">${esc(initials(name))}</span>`; }
@@ -655,7 +658,7 @@ function donutChart(id, labels, data, colors){
     options:{responsive:true, maintainAspectRatio:false, cutout:'68%', plugins:{legend:{position:'bottom', labels:{boxWidth:8, usePointStyle:true, padding:14}}}}});
 }
 function radarChart(id, dims, datasets){
-  makeChart(id, {type:'radar', data:{labels:dims, datasets:datasets.map((d,i)=>Object.assign({borderWidth:2, pointRadius:2, backgroundColor:i===0?'rgba(16,16,20,.08)':'rgba(74,222,128,.12)', borderColor:i===0?'#101014':'#2c8a55'}, d))},
+  makeChart(id, {type:'radar', data:{labels:dims, datasets:datasets.map((d,i)=>Object.assign({borderWidth:2, pointRadius:2, backgroundColor:i===0?'rgba(16,16,20,.08)':'rgba(74,222,128,.12)', borderColor:i===0?'#101014':'#15803d'}, d))},
     options:{responsive:true, maintainAspectRatio:false, scales:{r:{min:0, max:10, ticks:{stepSize:2, backdropColor:'transparent'}, grid:{color:'#ececf0'}, angleLines:{color:'#ececf0'}, pointLabels:{font:{size:10.5}}}}, plugins:{legend:{position:'bottom', labels:{boxWidth:8, usePointStyle:true}}}}});
 }
 
@@ -693,12 +696,12 @@ function seedData(){
     budgetData:{
       annual:12000000,
       categories:[
-        {id:'bc1',name:'数字营销',allocated:3600000,color:'#6d5bb8'},
-        {id:'bc2',name:'KOL合作',allocated:2400000,color:'#c2466f'},
-        {id:'bc3',name:'线下活动',allocated:2000000,color:'#3568b8'},
-        {id:'bc4',name:'内容制作',allocated:1200000,color:'#2c8a55'},
-        {id:'bc5',name:'市场研究',allocated:600000,color:'#a8842c'},
-        {id:'bc6',name:'品牌公关',allocated:1200000,color:'#b85b3a'},
+        {id:'bc1',name:'数字营销',allocated:3600000,color:'#4845a8'},
+        {id:'bc2',name:'KOL合作',allocated:2400000,color:'#2d2a6e'},
+        {id:'bc3',name:'线下活动',allocated:2000000,color:'#3c3996'},
+        {id:'bc4',name:'内容制作',allocated:1200000,color:'#15803d'},
+        {id:'bc5',name:'市场研究',allocated:600000,color:'#9a7a1f'},
+        {id:'bc6',name:'品牌公关',allocated:1200000,color:'#b8912e'},
         {id:'bc7',name:'其他',allocated:1000000,color:'#8a8a93'},
       ],
       expenses:[
@@ -841,16 +844,16 @@ function seedData(){
       {id:'mt5',channel:'抖音',campaign:'DOU+加热',type:'付费推广',startDate:d(-10),endDate:d(0),budget:50000,spent:50000,impressions:6200000,clicks:93000,conversions:1860,revenue:372000,status:'已完成',notes:''},
     ],
     calendarItems:[
-      {id:'cal1',title:'618宝贝护肤节 开屏广告',date:d(-5),endDate:d(5),color:'#6d5bb8',type:'Campaign',channel:'小红书/天猫'},
-      {id:'cal2',title:'@奶爸日记Leo 618开箱',date:d(-3),endDate:d(-3),color:'#c2466f',type:'KOL',channel:'微博/小红书'},
-      {id:'cal3',title:'美妆Cici 护肤测评',date:d(-1),endDate:d(-1),color:'#c2466f',type:'KOL',channel:'小红书'},
-      {id:'cal4',title:'6月品牌月刊推文',date:d(1),endDate:d(1),color:'#3568b8',type:'内容',channel:'微信'},
-      {id:'cal5',title:'抖音话题挑战赛上线',date:d(2),endDate:d(10),color:'#2c8a55',type:'Campaign',channel:'抖音'},
-      {id:'cal6',title:'KOL创作营（杭州）',date:d(40),endDate:d(41),color:'#a8842c',type:'活动',channel:'线下'},
-      {id:'cal7',title:'新品发布会',date:d(25),endDate:d(25),color:'#b85b3a',type:'活动',channel:'线下'},
-      {id:'cal8',title:'Q3品牌焕新Campaign启动',date:d(15),endDate:d(75),color:'#6d5bb8',type:'Campaign',channel:'全渠道'},
-      {id:'cal9',title:'儿科医生合作科普视频',date:d(5),endDate:d(5),color:'#c2466f',type:'KOL',channel:'微博/抖音'},
-      {id:'cal10',title:'小红书618收官盘点',date:d(6),endDate:d(6),color:'#2c8a55',type:'内容',channel:'小红书'},
+      {id:'cal1',title:'618宝贝护肤节 开屏广告',date:d(-5),endDate:d(5),color:'#4845a8',type:'Campaign',channel:'小红书/天猫'},
+      {id:'cal2',title:'@奶爸日记Leo 618开箱',date:d(-3),endDate:d(-3),color:'#2d2a6e',type:'KOL',channel:'微博/小红书'},
+      {id:'cal3',title:'美妆Cici 护肤测评',date:d(-1),endDate:d(-1),color:'#2d2a6e',type:'KOL',channel:'小红书'},
+      {id:'cal4',title:'6月品牌月刊推文',date:d(1),endDate:d(1),color:'#3c3996',type:'内容',channel:'微信'},
+      {id:'cal5',title:'抖音话题挑战赛上线',date:d(2),endDate:d(10),color:'#15803d',type:'Campaign',channel:'抖音'},
+      {id:'cal6',title:'KOL创作营（杭州）',date:d(40),endDate:d(41),color:'#9a7a1f',type:'活动',channel:'线下'},
+      {id:'cal7',title:'新品发布会',date:d(25),endDate:d(25),color:'#b8912e',type:'活动',channel:'线下'},
+      {id:'cal8',title:'Q3品牌焕新Campaign启动',date:d(15),endDate:d(75),color:'#4845a8',type:'Campaign',channel:'全渠道'},
+      {id:'cal9',title:'儿科医生合作科普视频',date:d(5),endDate:d(5),color:'#2d2a6e',type:'KOL',channel:'微博/抖音'},
+      {id:'cal10',title:'小红书618收官盘点',date:d(6),endDate:d(6),color:'#15803d',type:'内容',channel:'小红书'},
     ],
     myTodos:[
       {id:'td1',text:'确认618收官数据口径，下午4点前给到总经理',done:false,date:d(0),pinned:true},
@@ -929,7 +932,7 @@ function renderWorkbench(){
 </div>
 
 ${alerts.length?`<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px;">
-  ${alerts.slice(0,4).map(a=>`<div onclick="go('${a.go}')" style="display:flex;align-items:center;gap:10px;background:${a.tone==='red'?'var(--red-pale)':a.tone==='amber'?'var(--amber-pale)':'var(--powder)'};border-radius:13px;padding:11px 16px;font-size:13px;cursor:pointer;font-weight:500;color:${a.tone==='red'?'#9b1c1c':a.tone==='amber'?'#92610c':'var(--powder-ink)'};">
+  ${alerts.slice(0,4).map(a=>`<div onclick="go('${a.go}')" style="display:flex;align-items:center;gap:10px;background:${a.tone==='red'?'var(--red-pale)':a.tone==='amber'?'var(--amber-pale)':'var(--powder)'};border-radius:13px;padding:11px 16px;font-size:13px;cursor:pointer;font-weight:500;color:${a.tone==='red'?'#3c3996':a.tone==='amber'?'#8c6c1a':'var(--powder-ink)'};">
     <span>${a.icon}</span><span style="flex:1;">${esc(a.text)}</span><span style="opacity:.6;">处理 →</span></div>`).join('')}
 </div>`:''}
 
@@ -1121,7 +1124,7 @@ function processSmartImport(rows){
     else if(f.required) missing.push(f.label);
   });
   if(missing.length){
-    $('#siPreview').innerHTML=`<div style="background:var(--red-pale);border-radius:12px;padding:12px 16px;font-size:13px;color:#9b1c1c;">
+    $('#siPreview').innerHTML=`<div style="background:var(--red-pale);border-radius:12px;padding:12px 16px;font-size:13px;color:#3c3996;">
       ❌ 表头里找不到必填列：<strong>${missing.join('、')}</strong><br>
       <span style="font-size:12px;">检测到的表头：${rows[0].filter(Boolean).map(esc).join(' / ')||'(空)'}<br>请下载模板对照填写，列顺序可以不同，但表头文字要对得上。</span></div>`;
     return;
@@ -1152,7 +1155,7 @@ function processSmartImport(rows){
     ${items.length?`<div class="tbl-wrap" style="max-height:200px;"><table class="tbl"><thead><tr>${previewFields.map(f=>`<th>${esc(f.label)}</th>`).join('')}</tr></thead><tbody>
       ${items.slice(0,5).map(it=>`<tr>${previewFields.map(f=>`<td style="font-size:12px;">${esc(f.type==='number'?fmtN(it[f.key]):it[f.key])}</td>`).join('')}</tr>`).join('')}
     </tbody></table></div>${items.length>5?`<div style="font-size:11px;color:var(--muted);margin-top:5px;">…仅预览前5行，共${items.length}行</div>`:''}`:''}
-    ${errors.length?`<div style="background:var(--amber-pale);border-radius:12px;padding:10px 14px;font-size:12px;color:#92610c;margin-top:10px;max-height:120px;overflow:auto;">
+    ${errors.length?`<div style="background:var(--amber-pale);border-radius:12px;padding:10px 14px;font-size:12px;color:#8c6c1a;margin-top:10px;max-height:120px;overflow:auto;">
       ${errors.slice(0,8).map(e=>`第${e.row}行：${e.msgs.join('；')}`).join('<br>')}${errors.length>8?`<br>…共${errors.length}行有问题`:''}</div>`:''}`;
   const btn=$('#siConfirm');
   if(items.length){ btn.disabled=false; btn.style.opacity='1'; } else { btn.disabled=true; btn.style.opacity='.4'; }
@@ -1399,15 +1402,15 @@ function renderDashboard(){
     const datasets = cats.map((cat,ci)=>({
       label:cat.name,
       data:last6.map(({m})=>exp.filter(e=>e.category===cat.name&&new Date(e.date||'').getMonth()===m).reduce((s,e)=>s+(Number(e.amount)||0),0)/10000),
-      backgroundColor:ci===0?'#101014':ci===1?'#6d5bb8':ci===2?'#3568b8':'#d6d6dc',
+      backgroundColor:ci===0?'#101014':ci===1?'#4845a8':ci===2?'#3c3996':'#d6d6dc',
       borderRadius:5,maxBarThickness:30
     }));
     makeChart('dashBudget',{type:'bar',data:{labels:last6.map(l=>l.label),datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{boxWidth:8,usePointStyle:true}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:GRID,border:{display:false}}}}});
     const sc={'待开始':0,'进行中':0,'审核中':0,'已完成':0,'已取消':0};
     tasks.forEach(t=>{ if(sc[t.status]!==undefined) sc[t.status]++; });
     const lbs=Object.keys(sc).filter(k=>sc[k]>0); const vals=lbs.map(k=>sc[k]);
-    const colMap={'待开始':'#d6d6dc','进行中':'#4169ff','审核中':'#f59e0b','已完成':'#4ade80','已取消':'#ef4444'};
-    donutChart('dashDonut',lbs,vals,lbs.map(k=>colMap[k]||'#94a3b8'));
+    const colMap={'待开始':'#d6d6dc','进行中':'#4845a8','审核中':'#b8912e','已完成':'#4ade80','已取消':'#4845a8'};
+    donutChart('dashDonut',lbs,vals,lbs.map(k=>colMap[k]||'#a9a9b3'));
   },50);
 }
 function dashPeriod(btn){ $$('.seg button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); }
@@ -1454,7 +1457,7 @@ function renderStrategy(){
   </div>
 </div>
 ${(dangerKRs.length||warnKRs.length)?`
-<div style="background:var(--red-pale);border:1.5px solid #fad1d1;border-radius:var(--r);padding:14px 18px;margin-bottom:18px;">
+<div style="background:var(--red-pale);border:1.5px solid #cfcdec;border-radius:var(--r);padding:14px 18px;margin-bottom:18px;">
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
     <span style="font-size:16px;">⚠️</span>
     <span style="font-weight:700;font-size:14px;color:var(--red);">OKR 风险预警</span>
@@ -1507,7 +1510,7 @@ ${kpiData.length?`
     </div>
     <div style="margin-top:10px;background:#2a2a30;border-radius:12px;padding:12px;">
       <div style="font-size:11px;color:#6a6a74;margin-bottom:8px;letter-spacing:.5px;">时间进度</div>
-      <div style="display:flex;align-items:center;gap:10px;"><div style="flex:1;background:#3a3a42;border-radius:99px;height:8px;overflow:hidden;"><div style="height:100%;width:${elapsed}%;background:#f59e0b;border-radius:99px;"></div></div><span style="font-family:var(--font-m);font-size:13px;color:#f59e0b;">${elapsed}%</span></div>
+      <div style="display:flex;align-items:center;gap:10px;"><div style="flex:1;background:#3a3a42;border-radius:99px;height:8px;overflow:hidden;"><div style="height:100%;width:${elapsed}%;background:#b8912e;border-radius:99px;"></div></div><span style="font-family:var(--font-m);font-size:13px;color:#b8912e;">${elapsed}%</span></div>
     </div>
   </div>
 </div>
@@ -1706,7 +1709,7 @@ function renderTaskBody(all){
   const body = $('#taskBody'); if(!body) return;
   if(State._taskView==='kanban'){
     const cols = ['待开始','进行中','审核中','已完成'];
-    const colColors = {'待开始':'#d6d6dc','进行中':'#4169ff','审核中':'#f59e0b','已完成':'#4ade80'};
+    const colColors = {'待开始':'#d6d6dc','进行中':'#4845a8','审核中':'#b8912e','已完成':'#4ade80'};
     body.innerHTML = `<div class="kanban">${cols.map(col=>{
       const items=all.filter(t=>t.status===col);
       return `<div class="kb-col">
@@ -1923,7 +1926,7 @@ function renderCalendar(){
   const firstDay=new Date(y,m,1).getDay()||7;
   const daysInMonth=new Date(y,m+1,0).getDate();
   const today=todayStr();
-  const typeColor={'Campaign':'#6d5bb8','KOL':'#c2466f','内容':'#3568b8','活动':'#2c8a55','其他':'#a8842c'};
+  const typeColor={'Campaign':'#4845a8','KOL':'#2d2a6e','内容':'#3c3996','活动':'#15803d','其他':'#9a7a1f'};
 
   '#main'.replace('#main', '#main'); // placeholder
   const el = $('#main');
@@ -2223,7 +2226,7 @@ ${tab==='effect'?`
       });
       barChart('mktROI',channels,[{data:roiData,backgroundColor:channels.map((_,i)=>i===0?'#101014':'#d6d6dc'),label:'ROI'}]);
       const spendByCh=channels.map(ch=>mkt.filter(m=>m.channel===ch).reduce((s,m)=>s+(Number(m.spent)||0),0)/10000);
-      const colors=['#101014','#6d5bb8','#3568b8','#c2466f','#2c8a55','#a8842c'];
+      const colors=['#101014','#4845a8','#3c3996','#2d2a6e','#15803d','#9a7a1f'];
       donutChart('mktDonut',channels,spendByCh,channels.map((_,i)=>colors[i%colors.length]));
     } else {
       // keyword correlation chart: monthly spend vs avg search index
@@ -2239,15 +2242,15 @@ ${tab==='effect'?`
       if(months.length>0){
         const ctx=document.getElementById('kwCorrelChart');
         if(ctx) new Chart(ctx,{type:'line',data:{labels:months,datasets:[
-          {label:'投放花费(万)',data:spendByMonth,borderColor:'#6d5bb8',backgroundColor:'rgba(109,91,184,.12)',yAxisID:'y',tension:.3,fill:true},
-          {label:'平均搜索指数',data:indexByMonth,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.12)',yAxisID:'y1',tension:.3,fill:true}
+          {label:'投放花费(万)',data:spendByMonth,borderColor:'#4845a8',backgroundColor:'rgba(72,69,168,.12)',yAxisID:'y',tension:.3,fill:true},
+          {label:'平均搜索指数',data:indexByMonth,borderColor:'#b8912e',backgroundColor:'rgba(184,145,46,.12)',yAxisID:'y1',tension:.3,fill:true}
         ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{font:{size:11}}}},scales:{y:{type:'linear',display:true,position:'left',title:{display:true,text:'花费(万元)'},grid:{color:'#f0f0f4'}},y1:{type:'linear',display:true,position:'right',title:{display:true,text:'搜索指数'},grid:{drawOnChartArea:false}}}}});
       }
       // platform chart
       const platforms=[...new Set(kwData.map(k=>k.platform))];
       const platformIndex=platforms.map(p=>{ const arr=kwData.filter(k=>k.platform===p).map(k=>Number(k.index)||0); return arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length):0; });
       if(platforms.length>0){
-        const colors2=['#3568b8','#c2466f','#6d5bb8','#2c8a55','#a8842c','#101014'];
+        const colors2=['#3c3996','#2d2a6e','#4845a8','#15803d','#9a7a1f','#101014'];
         donutChart('kwPlatformChart',platforms,platformIndex,platforms.map((_,i)=>colors2[i%colors2.length]));
       }
     }
@@ -2392,7 +2395,7 @@ function saveKOL(id){
 function renderSocialMedia(){
   const posts=State.data.socialPosts||[];
   const totalLikes=posts.filter(p=>p.status==='已发').reduce((s,p)=>s+(Number(p.likes)||0),0);
-  const platMap={'小红书':'#c2466f','抖音':'#101014','微博':'#eb8027','微信':'#2c8a55','视频号':'#6d5bb8','B站':'#4169ff'};
+  const platMap={'小红书':'#2d2a6e','抖音':'#101014','微博':'#b8912e','微信':'#15803d','视频号':'#4845a8','B站':'#4845a8'};
 
   $('#main').innerHTML=`
 <div class="page-head">
@@ -2432,7 +2435,7 @@ function renderSocialMedia(){
     const pub=posts.filter(p=>p.status==='已发').slice(-8);
     lineChart('socialChart',pub.map(p=>(p.publishDate||'').slice(5)),[
       {label:'点赞',data:pub.map(p=>p.likes||0),borderColor:'#101014'},
-      {label:'收藏',data:pub.map(p=>p.saves||0),borderColor:'#c2466f'}
+      {label:'收藏',data:pub.map(p=>p.saves||0),borderColor:'#2d2a6e'}
     ]);
     const plats=[...new Set(posts.map(p=>p.platform))];
     const counts=plats.map(pl=>posts.filter(p=>p.platform===pl).length);
@@ -2822,7 +2825,7 @@ function renderAnalytics(){
     if(cats.length){const spByCat=cats.map(c=>expenses.filter(e=>e.category===c.name).reduce((s,e)=>s+(Number(e.amount)||0),0)/10000);donutChart('anaCat',cats.map(c=>c.name),spByCat,cats.map(c=>c.color||'#888'));}
     const campStats=['策划中','进行中','已完成','已取消'];
     const campCounts=campStats.map(s=>camps.filter(c=>c.status===s).length);
-    donutChart('anaCamp',campStats,campCounts,['#d6d6dc','#4169ff','#4ade80','#ef4444']);
+    donutChart('anaCamp',campStats,campCounts,['#d6d6dc','#4845a8','#4ade80','#4845a8']);
   },50);
 }
 
@@ -3196,7 +3199,7 @@ ${emps.filter(e=>e.status==='离职').length?`<div class="card"><div class="card
     ${active.map(e=>`<tr>
       <td><div class="av-row">${avatar(e.name,'sm')}<span style="font-weight:600;">${esc(e.name)}</span></div></td>
       <td style="font-size:12px;color:var(--muted);">${esc(e.role)}</td>
-      ${personalDims.map(d=>{const s=Number(e.personal?.[d])||0;const bg=s>=8?'#dcf3e3':s>=6?'#dbe7f8':s>=4?'#faf0d8':'#fbdde4';return `<td style="text-align:center;background:${bg};font-family:var(--font-m);font-weight:700;">${s}</td>`;}).join('')}
+      ${personalDims.map(d=>{const s=Number(e.personal?.[d])||0;const bg=s>=8?'#dcf3e3':s>=6?'#e0def4':s>=4?'#f7f0dc':'#d9d7f1';return `<td style="text-align:center;background:${bg};font-family:var(--font-m);font-weight:700;">${s}</td>`;}).join('')}
       <td style="text-align:center;font-family:var(--font-m);font-weight:700;">${fmt(avgPersonal(e))}</td>
     </tr>`).join('')||`<tr><td colspan="${personalDims.length+3}">${emptyState('⊹','暂无成员','')}</td></tr>`}
   </tbody></table></div>
@@ -3234,7 +3237,7 @@ ${emps.filter(e=>e.status==='离职').length?`<div class="card"><div class="card
     ${active.map(e=>{
       const weakDims=personalDims.filter(d=>(Number(e.personal?.[d])||0)<5);
       if(!weakDims.length) return '';
-      return `<div style="background:var(--red-pale);border:1.5px solid #fad1d1;border-radius:12px;padding:12px;">
+      return `<div style="background:var(--red-pale);border:1.5px solid #cfcdec;border-radius:12px;padding:12px;">
         <div class="av-row" style="margin-bottom:8px;">${avatar(e.name,'sm')}<span style="font-weight:700;">${esc(e.name)}</span><span style="font-size:11px;color:var(--muted);">${esc(e.role)}</span></div>
         <div style="font-size:11px;color:var(--red);">弱项：${weakDims.join('、')}</div>
       </div>`;
@@ -3294,9 +3297,9 @@ ${emps.filter(e=>e.status==='离职').length?`<div class="card"><div class="card
       if(sel) renderEmpRadar();
     } else if(tab==='gap'&&active.length){
       radarChart('gapRadarChart',personalDims,[
-        {label:'团队均值',data:teamPersonalAvg,borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.1)'},
+        {label:'团队均值',data:teamPersonalAvg,borderColor:'#4845a8',backgroundColor:'rgba(72,69,168,.1)'},
         {label:'目标水平(8)',data:personalDims.map(()=>8),borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.05)'},
-        {label:'达标线(6)',data:personalDims.map(()=>6),borderColor:'#f59e0b',backgroundColor:'transparent'}
+        {label:'达标线(6)',data:personalDims.map(()=>6),borderColor:'#b8912e',backgroundColor:'transparent'}
       ]);
     }
   },50);
@@ -3310,7 +3313,7 @@ function renderEmpRadar(){
   const allDims=[...dims,...posKeys];
   const allScores=[...scores,...posKeys.map(k=>Number(e.position_scores?.[k])||0)];
   radarChart('empRadarChart',allDims,[
-    {label:esc(e.name),data:allScores,borderColor:'#6d5bb8',backgroundColor:'rgba(109,91,184,.12)'},
+    {label:esc(e.name),data:allScores,borderColor:'#4845a8',backgroundColor:'rgba(72,69,168,.12)'},
     {label:'优秀基准',data:allDims.map(()=>8),borderColor:'#4ade80',backgroundColor:'rgba(74,222,128,.05)'}
   ]);
 }
@@ -3561,14 +3564,14 @@ function openTeamEntry(){
 <div style="margin-bottom:10px;font-size:12px;color:var(--muted);">选择需要更新数据的模块，快速进入填报界面</div>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
   ${[
-    {icon:'📋',label:'任务进度更新',desc:'更新任务状态和进度',action:"closeModal();go('tasks');setTimeout(()=>document.querySelector('.btn.sm')?.click(),300)"},
-    {icon:'💰',label:'预算费用录入',desc:'提交报销或费用记录',action:"closeModal();go('budget');setTimeout(()=>{const btns=document.querySelectorAll('.btn.sm');btns[btns.length-1]?.click();},300)"},
-    {icon:'📣',label:'Campaign数据',desc:'更新推广活动数据',action:"closeModal();go('campaigns');setTimeout(()=>document.querySelector('.btn.sm:last-child')?.click(),300)"},
-    {icon:'🔍',label:'品牌搜索指数',desc:'录入各平台搜索数据',action:"closeModal();renderMarketingTracking('keyword');setTimeout(()=>kwForm(),300)"},
-    {icon:'⭐',label:'KOL合作记录',desc:'新增或更新达人合作',action:"closeModal();go('kol');setTimeout(()=>kolForm(),300)"},
-    {icon:'📅',label:'日历事件',desc:'添加会议/活动/排期',action:"closeModal();go('calendar');setTimeout(()=>calForm(),300)"},
-    {icon:'📊',label:'KPI当前值',desc:'更新品牌KPI完成情况',action:"closeModal();renderStrategy();setTimeout(()=>manageKPI(),300)"},
-    {icon:'🏪',label:'竞品动态',desc:'录入竞品最新信息',action:"closeModal();go('competitor');setTimeout(()=>competitorForm(),300)"},
+    {icon:'📋',label:'任务进度更新',desc:'更新任务状态和进度',action:"closeModal();go('tasks');setTimeout(()=>taskForm(),250)"},
+    {icon:'💰',label:'预算费用录入',desc:'提交报销或费用记录',action:"closeModal();go('budget');setTimeout(()=>expenseForm(),250)"},
+    {icon:'📣',label:'Campaign数据',desc:'更新推广活动数据',action:"closeModal();go('campaigns');setTimeout(()=>campForm(),250)"},
+    {icon:'🔍',label:'品牌搜索指数',desc:'录入各平台搜索数据',action:"closeModal();go('marketing-tracking');setTimeout(()=>{renderMarketingTracking('keyword');kwForm();},250)"},
+    {icon:'⭐',label:'KOL合作记录',desc:'新增或更新达人合作',action:"closeModal();go('kol');setTimeout(()=>kolForm(),250)"},
+    {icon:'📅',label:'日历事件',desc:'添加会议/活动/排期',action:"closeModal();go('calendar');setTimeout(()=>calItemForm(),250)"},
+    {icon:'📊',label:'KPI当前值',desc:'更新品牌KPI完成情况',action:"closeModal();go('strategy');setTimeout(()=>manageKPI(),250)"},
+    {icon:'🏪',label:'竞品动态',desc:'录入竞品最新信息',action:"closeModal();go('competitor');setTimeout(()=>compForm(),250)"},
   ].map(item=>`<button class="btn ghost" style="flex-direction:column;align-items:flex-start;gap:5px;padding:14px;border-radius:14px;height:auto;" onclick="${item.action}">
     <div style="font-size:18px;">${item.icon}</div>
     <div style="font-size:13px;font-weight:700;">${item.label}</div>
