@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Frogprince Brand OS · 品牌部工作台</title>
+<title>Brand OS · 品牌工作台</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <style>
 :root{
   --bg:#f4f5f7; --card:#ffffff; --card-2:#fafafb;
@@ -285,12 +287,13 @@ table.tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
 <body>
 
 <header class="topbar">
-  <div class="brand" onclick="go('dashboard')">
-    <div class="brand-mark">FP</div>
-    <div class="brand-name">Frogprince Brand OS<small>青蛙王子 · 品牌部工作台</small></div>
+  <div class="brand" onclick="go('workbench')">
+    <div class="brand-mark">OS</div>
+    <div class="brand-name">Brand OS<small>品牌工作台</small></div>
   </div>
   <nav class="navgroups"><div class="navgroups-inner" id="navGroups"></div></nav>
   <div class="top-actions">
+    <button class="btn sm ghost" style="font-size:12px;gap:5px;" onclick="universalImport({})" title="上传任意文件，自动识别归类">⬆ 上传导入</button>
     <button class="btn sm ghost" style="font-size:12px;gap:5px;" onclick="openTeamEntry()" title="团队成员填报数据入口">📋 团队填报</button>
     <button class="icon-pill" title="搜索 (Ctrl+K)" onclick="openPalette()">⌕</button>
     <button class="icon-pill" title="通知" onclick="showNotifications()">🔔<span class="ndot" id="navDot"></span></button>
@@ -1170,6 +1173,628 @@ function runSmartImport(){
   window.__siItems=null;
 }
 
+/* ======= UNIVERSAL IMPORT ENGINE (verified against 15 templates) ======= */
+function impUid(p){ return (p||"x")+Math.random().toString(36).slice(2,9); }
+/* ===========================================================================
+   Brand OS · Universal Import Engine  (standalone core — pure functions)
+   Handles: xlsx(multi-sheet) / csv(GBK+UTF8) / txt / md / pdf / docx
+   Tabular  -> template impFingerprint -> module records
+   Text     -> keyword routing + AI extraction (browser only)
+   =========================================================================== */
+
+/* ---- coercion helpers (mirror of in-app) ---- */
+function impNorm(h){ return String(h==null?'':h).replace(/[\s*＊:：()（）\/｜|]/g,'').toLowerCase(); }
+function impNum(v){
+  if(v==null||v==='') return 0;
+  if(typeof v==='number') return v;
+  let s=String(v).replace(/[¥￥,，\s元]/g,'').trim();
+  if(s===''||s==='/'||s==='-') return 0;
+  let mult=1;
+  if(/万$/.test(s)){ mult=10000; s=s.replace(/万$/,''); }
+  if(/[kK]$/.test(s)){ mult=1000; s=s.replace(/[kK]$/,''); }
+  // scientific like 2.307e+06 handled by parseFloat
+  const n=parseFloat(s);
+  return isNaN(n)?0:n*mult;
+}
+function impDate(v){
+  if(v==null||v==='') return '';
+  if(v instanceof Date && !isNaN(v)) return v.toISOString().slice(0,10);
+  if(typeof v==='number'){ if(v>20000&&v<60000){ const dt=new Date(Math.round((v-25569)*86400*1000)); if(!isNaN(dt)) return dt.toISOString().slice(0,10);} return ''; }
+  let s=String(v).trim();
+  let m=s.match(/^(?:(\d{4})年)?(\d{1,2})月(\d{1,2})日?$/);
+  if(m){ const y=m[1]||new Date().getFullYear(); return `${y}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`; }
+  m=s.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+  if(m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m){ let y=Number(m[3]); if(y<100) y+=2000; return `${y}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`; }
+  const dt=new Date(s); if(!isNaN(dt)&&/\d{4}/.test(s)) return dt.toISOString().slice(0,10);
+  return '';
+}
+function impPick(row,map,key){ const i=map[key]; return i==null?'':row[i]; }
+
+/* ---- header impFingerprint: find data-header row + column index map ---- */
+function impBuildColMap(headerRow){
+  const map={}; headerRow.forEach((h,i)=>{ const n=impNorm(h); if(n&&map[n]==null) map[n]=i; }); return map;
+}
+function impFindCol(map,cands){
+  for(const c of cands){ const n=impNorm(c);
+    if(map[n]!=null) return map[n];
+  }
+  // fuzzy contains
+  for(const c of cands){ const n=impNorm(c);
+    for(const k in map){ if(k.includes(n)||n.includes(k)) return map[k]; }
+  }
+  return null;
+}
+
+/* ===========================================================================
+   TEMPLATE IMP_PROFILES
+   each: {id,name,module,signature:[tokens], detect?(sheets), parse(sheets)->{records,note}}
+   signature tokens are matched (normalized) against the header row of any sheet.
+   =========================================================================== */
+const IMP_PROFILES = [
+  /* 2. 财务明细总账 -> expenses (实际支出) */
+  {
+    id:'finance_ledger', name:'财务明细总账', module:'expenses',
+    signature:['凭证号','摘要','方向','二级类目','三级类目'],
+    headerHint:['摘要','凭证号'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows, this.signature);
+      const map=impBuildColMap(sh.rows[hi]); const recs=[];
+      const cMonth=impFindCol(map,['月份']),cDay=impFindCol(map,['日']),cDesc=impFindCol(map,['摘要']),
+            cOut=impFindCol(map,['支出']),cCr=impFindCol(map,['贷方']),cL2=impFindCol(map,['二级类目']),
+            cL3=impFindCol(map,['三级类目']),cProj=impFindCol(map,['所属项目']),cVou=impFindCol(map,['凭证号']),cDir=impFindCol(map,['方向']);
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const desc=String(impPick(row,{}, )||row[cDesc]||'').trim();
+        if(!desc||/本月合计|本年累计/.test(desc)) continue;
+        const out=impNum(row[cOut]); const cr=impNum(row[cCr]);
+        const amt = out!==0?out:cr;
+        if(amt===0 && !desc) continue;
+        const mo=impNum(row[cMonth]), dy=impNum(row[cDay]);
+        let date=''; if(mo){ const y=2026; date=`${y}-${String(mo).padStart(2,'0')}-${String(dy||1).padStart(2,'0')}`; }
+        recs.push({ id:impUid('e'), category:String(row[cL2]||'其他').trim(), subCategory:String(row[cL3]||'').trim(),
+          desc, amount:amt, date, project:String(cProj!=null?row[cProj]:'').trim(), voucherNo:String(cVou!=null?row[cVou]:'').trim(),
+          status: cr!==0?'已冲销':'已支付' });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条费用流水（已跳过合计行）`};
+    }
+  },
+
+  /* 7. 年度预算表 -> budgetPlan (三级类目 × 12月) */
+  {
+    id:'annual_budget', name:'年度预算表', module:'budgetPlan',
+    signature:['一级类目','二级类目','三级类目','全年'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cL1=impFindCol(map,['一级类目']),cL2=impFindCol(map,['二级类目']),cL3=impFindCol(map,['三级类目']),cCode=impFindCol(map,['代码']),cYear=impFindCol(map,['全年']);
+      const months=[]; for(let m=1;m<=12;m++){ months.push(impFindCol(map,[m+'月'])); }
+      const recs=[];
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const l3=String(row[cL3]||'').trim(); if(!l3) continue;
+        const monthly=months.map(ci=>ci==null?0:impNum(row[ci]));
+        recs.push({ id:impUid('bp'), level1:String(row[cL1]||'').trim(), category:String(row[cL2]||'').trim(), subCategory:l3,
+          code:String(cCode!=null?row[cCode]:'').trim(), monthly, annual:impNum(row[cYear]) });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条年度预算科目（按月分布）`};
+    }
+  },
+
+  /* 8. 月度计划支出 -> paymentPlan (多段：每段 "X月计划支出") */
+  {
+    id:'payment_plan', name:'月度计划支出表', module:'paymentPlan',
+    detect(sheets){ return sheets.some(s=>s.rows.some(r=>r.some(c=>/月计划支出/.test(String(c))))); },
+    parse(sheets){
+      const sh=sheets[0]; const recs=[]; let curMonth='';
+      for(let r=0;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const c0=String(row[0]||'').trim();
+        const mm=c0.match(/(\d{1,2})月计划支出/); if(mm){ curMonth=mm[1]+'月'; continue; }
+        if(c0==='项目'||c0===''||/总费用/.test(String(row[1]||''))===false&&c0==='项目') continue;
+        if(c0==='项目') continue;
+        const total=impNum(row[1]);
+        if(!total || c0==='项目') continue;
+        // columns: 项目,总费用,第一笔,第二笔,第三笔,已支付,待支付,备注,(预算内/外),(类目)
+        recs.push({ id:impUid('pp'), month:curMonth, project:c0, total,
+          paid:impNum(row[5]), unpaid:impNum(row[6]),
+          note:String(row[7]||'').trim(), budgetType:String(row[8]||'').trim(), category:String(row[9]||'').trim() });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条计划支出（跨 ${[...new Set(recs.map(r=>r.month))].length} 个月）`};
+    }
+  },
+
+  /* 3. KOL/KOC 效果表 -> kol + marketingTracking */
+  {
+    id:'kol_effect', name:'KOL/KOC投放效果表', module:'kol',
+    signature:['账号名称','达人主页','粉丝量','互动合计'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cName=impFindCol(map,['账号名称','账号']),cUrl=impFindCol(map,['达人主页']),cFans=impFindCol(map,['粉丝量']),
+        cType=impFindCol(map,['类型']),cProj=impFindCol(map,['项目']),cDate=impFindCol(map,['发布日期']),cPlat=impFindCol(map,['平台']),
+        cExp=impFindCol(map,['曝光']),cInter=impFindCol(map,['互动合计']),cLike=impFindCol(map,['点赞']),cHot=impFindCol(map,['爆文']),cLink=impFindCol(map,['发布链接']);
+      const kol=[], mkt=[];
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const name=String(row[cName]||'').trim();
+        if(!name||name==='短视频') { // 短视频聚合行 -> 仅投放
+          const exp=impNum(row[cExp]); if(exp>0){ mkt.push({id:impUid('mt'),channel:String(row[cPlat]||'抖音').trim(),campaign:String(row[cProj]||'').trim()+'·短视频',type:'KOL推广',startDate:'',spent:0,impressions:exp,clicks:0,conversions:0,revenue:0,status:'已完成',notes:'聚合投放'}); }
+          continue;
+        }
+        const fans=impNum(row[cFans]); const exp=impNum(row[cExp]); const inter=impNum(row[cInter]);
+        kol.push({ id:impUid('k'), name, platform:String(row[cPlat]||'').trim(), category:String(row[cType]||'').trim(),
+          fans:(fans?fans+'万':''), fee:0, status:'合作中', contractEnd:'', owner:'', rating: String(row[cHot]||'').includes('爆')?5:0,
+          tags:String(row[cProj]||'').trim(), notes:(cLink!=null?String(row[cLink]||''):''), url:(cUrl!=null?String(row[cUrl]||''):'') });
+        if(exp>0||inter>0) mkt.push({ id:impUid('mt'), channel:String(row[cPlat]||'').trim(), campaign:String(row[cProj]||'').trim()+'·'+name,
+          type:String(row[cType]||'KOL推广').trim(), startDate:impDate(row[cDate]), spent:0, impressions:exp, clicks:0,
+          conversions:inter, revenue:0, status:'已完成', notes:(String(row[cHot]||'').includes('爆')?'爆文 ':'')+'点赞'+impNum(row[cLike]) });
+      }
+      return {records:kol, extra:{marketingTracking:mkt}, note:`识别 ${kol.length} 位达人 + ${mkt.length} 条投放数据`};
+    }
+  },
+
+  /* 4. 社交媒体月报 -> socialMonthly */
+  {
+    id:'social_monthly', name:'社交媒体月报', module:'socialMonthly',
+    signature:['数据更新日期','曝光','增粉','视频播放'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cDate=impFindCol(map,['数据更新日期']),cPlat=impFindCol(map,['平台']),cY=impFindCol(map,['年']),cM=impFindCol(map,['月']),
+        cExp=impFindCol(map,['曝光']),cRead=impFindCol(map,['阅读小眼睛','阅读']),cInter=impFindCol(map,['互动']),cFans=impFindCol(map,['增粉讨论量','增粉']),
+        cCnt=impFindCol(map,['更新条数']),cVid=impFindCol(map,['视频播放']);
+      const recs=[];
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const plat=String(row[cPlat]||'').trim(); if(!plat) continue;
+        recs.push({ id:impUid('sm'), platform:plat, year:String(row[cY]||'').trim(), month:String(row[cM]||'').trim(),
+          date:impDate(row[cDate]), impressions:impNum(row[cExp]), reads:impNum(row[cRead]),
+          interactions:impNum(row[cInter]), fansGain:impNum(row[cFans]), posts:impNum(row[cCnt]), videoPlays:impNum(row[cVid]) });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条社媒月度数据`};
+    }
+  },
+
+  /* 5. 会员数据 -> memberData */
+  {
+    id:'member_data', name:'会员数据', module:'memberData',
+    signature:['总会员数','支付会员数','会员复购率'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const g=(names)=>{ const i=impFindCol(map,names); return i; };
+      const recs=[];
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const store=String(row[g(['店铺'])]||'').trim(); if(!store) continue;
+        recs.push({ id:impUid('mb'), store, date:String(row[g(['日期'])]||'').trim(),
+          totalMembers:impNum(row[g(['总会员数'])]), paidMembers:impNum(row[g(['支付会员数'])]),
+          memberAOV:impNum(row[g(['会员客单价'])]), totalCustomers:impNum(row[g(['总客户数'])]),
+          newMembers:impNum(row[g(['新增会员数'])]), repurchaseRate:impNum(row[g(['会员复购率'])]),
+          repurchaseAmount:impNum(row[g(['复购会员支付金额'])]) });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条会员数据`};
+    }
+  },
+
+  /* 13. 媒体发布监测 -> mediaCoverage */
+  {
+    id:'media_coverage', name:'媒体发布监测', module:'mediaCoverage',
+    signature:['媒体名称','文章标题','发布网址'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cName=impFindCol(map,['媒体名称']),cDate=impFindCol(map,['日期']),cTitle=impFindCol(map,['文章标题']),cUrl=impFindCol(map,['发布网址']);
+      const recs=[];
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const name=String(row[cName]||'').trim(); const title=String(row[cTitle]||'').trim();
+        if(!name&&!title) continue; if(!name) continue;
+        recs.push({ id:impUid('mc'), media:name, date:impDate(row[cDate]), title, url:String(cUrl!=null?row[cUrl]:'').trim() });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条媒体发布记录`};
+    }
+  },
+
+  /* 9. 任务分配.xlsx -> tasks */
+  {
+    id:'task_assign', name:'任务分配表', module:'tasks',
+    signature:['任务描述','优先级','负责人','截止日期'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cT=impFindCol(map,['任务描述']),cP=impFindCol(map,['优先级']),cA=impFindCol(map,['负责人']),cS=impFindCol(map,['状态']),
+        cStart=impFindCol(map,['开始日期']),cDue=impFindCol(map,['截止日期']),cNote=impFindCol(map,['备注']);
+      const recs=[];
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const title=String(row[cT]||'').trim(); if(!title) continue;
+        recs.push({ id:impUid('t'), title, assignee:String(row[cA]||'').trim(), priority:impPriority(row[cP]),
+          status:impStatus(row[cS]), type:'内容', dueDate:impDate(row[cDue]), notes:String(cNote!=null?row[cNote]:'').trim() });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条任务`};
+    }
+  },
+
+  /* 10. 项目任务总表 -> tasks (含项目/板块/成员) */
+  {
+    id:'project_tasks', name:'项目任务总表', module:'tasks',
+    signature:['归属任务项','所属项目','所属板块','执行组'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cT=impFindCol(map,['任务']),cProj=impFindCol(map,['所属项目']),cSec=impFindCol(map,['所属板块']),cS=impFindCol(map,['状态']),
+        cPrg=impFindCol(map,['进度']),cP=impFindCol(map,['优先级']),cStart=impFindCol(map,['实际开始','计划开始']),cDue=impFindCol(map,['计划完成','实际完成']),cMem=impFindCol(map,['成员']);
+      const recs=[];
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const title=String(row[cT]||'').trim(); if(!title) continue;
+        recs.push({ id:impUid('t'), title, assignee:String(cMem!=null?row[cMem]:'').trim(), priority:impPriority(row[cP]),
+          status:impStatus(row[cS]), type:'内容', project:String(cProj!=null?row[cProj]:'').trim(),
+          section:String(cSec!=null?row[cSec]:'').trim(), dueDate:impDate(row[cDue]), notes:String(cPrg!=null?row[cPrg]:'').trim() });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条项目任务`};
+    }
+  },
+
+  /* 11. 工作进度.xlsx -> tasks (大类/具体项目/进度) */
+  {
+    id:'work_progress', name:'工作进度表', module:'tasks',
+    signature:['大类','具体项目','进度'],
+    parse(sheets){
+      const out=[];
+      sheets.forEach(sh=>{
+        if(!sh.rows||!sh.rows.length) return;
+        const sig=this.signature.map(impNorm);
+        const hi=impFindHeaderRow(sh.rows,this.signature);
+        const hr=(sh.rows[hi]||[]).map(impNorm);
+        const matched=sig.filter(t=>hr.some(h=>h&&(h===t||h.includes(t)||t.includes(h)))).length;
+        if(matched<2) return; // 该工作表无此结构（空表/无关表）
+        const map=impBuildColMap(sh.rows[hi]);
+        const cBig=impFindCol(map,['大类']),cItem=impFindCol(map,['具体项目']),cPrg=impFindCol(map,['进度']),cNote=impFindCol(map,['备注']);
+        let curBig='';
+        for(let r=hi+1;r<sh.rows.length;r++){
+          const row=sh.rows[r]; const big=String(row[cBig]||'').trim(); if(big) curBig=big;
+          const item=String(row[cItem]||'').trim(); const prg=String(row[cPrg]||'').trim();
+          if(!item&&!prg) continue;
+          out.push({ id:impUid('t'), title:(curBig?curBig+' · ':'')+(item||prg), assignee:'', priority:'中',
+            status:impProg(prg), type:'其他', project:curBig, dueDate:'', notes:[prg,String(cNote!=null?row[cNote]:'')].filter(Boolean).join(' ') });
+        }
+      });
+      return {records:out, note:`识别 ${out.length} 条工作进度项`};
+    }
+  },
+
+  /* 12. 内容选题日历 -> socialPosts (内容计划) */
+  {
+    id:'content_plan', name:'内容选题日历', module:'socialPosts',
+    signature:['选题','发布日期','需求部门','人员需求'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cTitle=impFindCol(map,['选题']),cDate=impFindCol(map,['发布日期']),cProd=impFindCol(map,['产品']),cType=impFindCol(map,['类型']),
+        cOwner=impFindCol(map,['人员需求']),cStatus=impFindCol(map,['状态']),cNote=impFindCol(map,['备注']);
+      const recs=[];
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const title=String(row[cTitle]||'').trim(); if(!title) continue;
+        const st=impNum(row[cStatus]);
+        recs.push({ id:impUid('sp'), platform:'内容计划', title, type:impCType(row[cType]), publishDate:impDate(row[cDate]),
+          status: st>=1?'已发':st>0?'制作中':'待发布', likes:0,comments:0,shares:0,saves:0,
+          notes:[String(row[cProd]||''),String(row[cOwner]||''),String(cNote!=null?row[cNote]:'')].filter(x=>x&&x!=='/').join(' · ') });
+      }
+      return {records:recs, note:`识别 ${recs.length} 条内容选题`};
+    }
+  },
+
+  /* 1. 工作安排节奏表 (矩阵：日期横轴 × 平台/人纵轴) -> calendarItems + tasks */
+  {
+    id:'rhythm_matrix', name:'工作安排节奏表', module:'calendarItems',
+    detect(sheets){ return sheets.some(s=>s.rows.some(r=>String(r[0]||'').includes('日期')&&r.filter(c=>/\d{1,2}月\d{1,2}日/.test(String(c))).length>=3)) || sheets.some(s=>s.rows.some(r=>/工作安排节奏/.test(String(r[0])))); },
+    parse(sheets){
+      const sh=sheets[0]; const recs=[];
+      const platRows=['公众号','视频号','微博','小红书','官号','俱乐部'];
+      let dateCols=[]; // {col,date}
+      for(let r=0;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const c0=String(row[0]||'').trim();
+        // date header row
+        const dcells=[]; row.forEach((c,ci)=>{ const m=String(c).match(/(\d{1,2})月(\d{1,2})日/); if(m) dcells.push({col:ci,date:`2026-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`}); });
+        if(dcells.length>=3){ dateCols=dcells; continue; }
+        if(!dateCols.length) continue;
+        // any row with a label in col0 or col1: treat each filled cell under a date as a calendar item
+        const label=c0||String(row[1]||'').trim();
+        if(!label) continue;
+        dateCols.forEach(dc=>{
+          const v=String(row[dc.col]||'').trim();
+          if(v && v!=='/' ){
+            recs.push({ id:impUid('cal'), title:v, date:dc.date, endDate:'', type: platRows.includes(label)?'内容':'活动',
+              channel: platRows.includes(label)?label:'', notes:'来源：工作安排节奏表 · '+label });
+          }
+        });
+      }
+      return {records:recs, note:`从节奏矩阵识别 ${recs.length} 条排期（已展开到具体日期）`};
+    }
+  },
+
+  /* 6. CBE展会Timeline -> events + tasks */
+  {
+    id:'event_timeline', name:'展会执行Timeline', module:'tasks',
+    signature:['工作名称','负责人','详细安排'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cProj=impFindCol(map,['项目']),cWork=impFindCol(map,['工作名称']),cOwner=impFindCol(map,['负责人']),cDetail=impFindCol(map,['详细安排']);
+      const recs=[]; let curProj='';
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const proj=String(row[cProj]||'').trim(); if(proj) curProj=proj.replace(/\n/g,' ');
+        const work=String(row[cWork]||'').trim(); const detail=String(row[cDetail]||'').trim();
+        if(!work&&!detail) continue;
+        recs.push({ id:impUid('t'), title:(work||detail.slice(0,20)), assignee:String(row[cOwner]||'').replace(/\n/g,'/').trim(),
+          priority:'中', status:'待开始', type:'活动', project:curProj, dueDate:'',
+          notes:detail.replace(/\n/g,' ') });
+      }
+      return {records:recs, note:`从展会Timeline识别 ${recs.length} 条执行任务`};
+    }
+  },
+
+  /* 15. 代言人项目分工执行表 -> tasks */
+  {
+    id:'spokesperson_div', name:'代言人项目分工执行表', module:'tasks',
+    signature:['执行大类','事项','板块负责人','所属人'],
+    parse(sheets){
+      const sh=sheets[0]; const hi=impFindHeaderRow(sh.rows,this.signature); const map=impBuildColMap(sh.rows[hi]);
+      const cBig=impFindCol(map,['执行大类']),cItem=impFindCol(map,['事项']),cLead=impFindCol(map,['板块负责人']),cDetail=impFindCol(map,['细项']),cOwner=impFindCol(map,['所属人']),cTime=impFindCol(map,['时间']);
+      const recs=[]; let curBig='',curItem='';
+      for(let r=hi+1;r<sh.rows.length;r++){
+        const row=sh.rows[r]; const big=String(row[cBig]||'').replace(/\n/g,' ').trim(); if(big) curBig=big;
+        const item=String(row[cItem]||'').trim(); if(item) curItem=item;
+        const detail=String(row[cDetail]||'').trim(); const owner=String(row[cOwner]||'').trim();
+        if(!detail&&!item) continue;
+        recs.push({ id:impUid('t'), title:(detail||curItem), assignee:owner, priority:'中', status:'待开始', type:'活动',
+          project:'代言人项目'+(curBig?' · '+curBig:''), dueDate:impDate(row[cTime]),
+          notes:[curItem,String(cTime!=null?row[cTime]:'')].filter(Boolean).join(' · ') });
+      }
+      return {records:recs, note:`从代言人分工表识别 ${recs.length} 条任务`};
+    }
+  },
+];
+
+/* ---- mapping helpers ---- */
+function impFindHeaderRow(rows, signature){
+  if(!rows||!rows.length) return 0;
+  const sig=signature.map(impNorm);
+  let best=-1,bestScore=0;
+  for(let i=0;i<Math.min(rows.length,30);i++){
+    const hr=(rows[i]||[]).map(impNorm); let s=0;
+    sig.forEach(t=>{ if(hr.some(h=>h&&(h===t||h.includes(t)||t.includes(h)))) s++; });
+    if(s>bestScore){ bestScore=s; best=i; }
+  }
+  return best>=0?best:0;
+}
+function impPriority(v){ const s=String(v||'').trim();
+  if(/S|紧急且重要|最高/.test(s))return '高'; if(/A|高|重要/.test(s))return '高'; if(/B|中/.test(s))return '中'; if(/C|低/.test(s))return '低'; return '中'; }
+function impStatus(v){ const s=String(v||'').trim();
+  if(/已完成|完成|已上传|已交付/.test(s))return '已完成'; if(/进行中|制作中/.test(s))return '进行中';
+  if(/待|未开始|未命名/.test(s))return '待开始'; if(/暂停|取消/.test(s))return '已取消'; return '待开始'; }
+function impProg(p){ const s=String(p||'').trim();
+  if(/已完成|完成/.test(s))return '已完成'; if(/进行中|更新|优化/.test(s))return '进行中'; if(/未开始/.test(s))return '待开始'; return '进行中'; }
+function impCType(v){ const s=String(v||'').trim();
+  if(/视频/.test(s))return '视频'; if(/长图文/.test(s))return '长图文'; if(/图/.test(s))return '图文'; return s||'图文'; }
+
+/* ---- main impFingerprint dispatcher ---- */
+function impFingerprint(sheets, fileName){
+  // detect() profiles first (matrix/section)
+  for(const p of IMP_PROFILES){ if(p.detect && p.detect(sheets)){ return p; } }
+  // signature scoring across all sheets
+  let best=null,bestScore=0;
+  for(const p of IMP_PROFILES){ if(!p.signature) continue;
+    const sig=p.signature.map(impNorm);
+    let pScore=0;
+    sheets.forEach(sh=>{
+      const hi=impFindHeaderRow(sh.rows,p.signature); const hr=(sh.rows[hi]||[]).map(impNorm);
+      let s=0; sig.forEach(t=>{ if(hr.some(h=>h&&(h===t||h.includes(t)||t.includes(h)))) s++; });
+      pScore=Math.max(pScore,s);
+    });
+    const ratio=pScore/sig.length;
+    if(pScore>bestScore && ratio>=0.6){ bestScore=pScore; best=p; }
+  }
+  return best;
+}
+
+
+/* ===========================================================================
+   BROWSER LAYER — file parsing, universal import UI, commit, AI extraction
+   =========================================================================== */
+const IMP_MODULES = {
+  tasks:        {label:'团队任务',    key:()=>State.data.tasks||(State.data.tasks=[]),                 after:()=>State.view==='tasks'&&renderTasks()},
+  calendarItems:{label:'日程日历',    key:()=>State.data.calendarItems||(State.data.calendarItems=[]),  after:()=>State.view==='calendar'&&renderCalendar()},
+  expenses:     {label:'费用记录',    key:()=>{State.data.budgetData=State.data.budgetData||{expenses:[]};return State.data.budgetData.expenses||(State.data.budgetData.expenses=[]);}, after:()=>State.view==='budget'&&renderBudget()},
+  budgetPlan:   {label:'年度预算计划', key:()=>State.data.budgetPlan||(State.data.budgetPlan=[]),        after:()=>State.view==='budget'&&renderBudget()},
+  paymentPlan:  {label:'付款计划',    key:()=>State.data.paymentPlan||(State.data.paymentPlan=[]),      after:()=>State.view==='budget'&&renderBudget()},
+  kol:          {label:'KOL达人库',   key:()=>State.data.kol||(State.data.kol=[]),                      after:()=>State.view==='kol'&&renderKOL()},
+  marketingTracking:{label:'投放追踪',key:()=>State.data.marketingTracking||(State.data.marketingTracking=[]), after:()=>State.view==='marketing-tracking'&&renderMarketingTracking()},
+  socialPosts:  {label:'内容数据',    key:()=>State.data.socialPosts||(State.data.socialPosts=[]),      after:()=>State.view==='social-media'&&renderSocialMedia()},
+  socialMonthly:{label:'社媒月度数据', key:()=>State.data.socialMonthly||(State.data.socialMonthly=[]),  after:()=>State.view==='social-media'&&renderSocialMedia()},
+  memberData:   {label:'会员数据',    key:()=>State.data.memberData||(State.data.memberData=[]),        after:()=>State.view==='member'&&renderMember()},
+  mediaCoverage:{label:'媒体声量',    key:()=>State.data.mediaCoverage||(State.data.mediaCoverage=[]),  after:()=>State.view==='media-voice'&&renderMediaVoice()},
+  brandAssets:  {label:'品牌资产',    key:()=>State.data.brandAssets||(State.data.brandAssets=[]),      after:()=>State.view==='brand-assets'&&renderBrandAssets()},
+  events:       {label:'线下活动',    key:()=>State.data.events||(State.data.events=[]),                after:()=>State.view==='events'&&renderEvents()},
+};
+
+/* read uploaded file -> {kind:'tabular',sheets:[{name,rows}]} | {kind:'text',text} */
+function impParseFile(file){
+  return new Promise((resolve,reject)=>{
+    const name=file.name||''; const ext=(name.split('.').pop()||'').toLowerCase();
+    const rd=new FileReader();
+    rd.onerror=()=>reject(new Error('文件读取失败'));
+    if(ext==='xlsx'||ext==='xls'){
+      rd.onload=e=>{ try{
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true});
+        resolve({kind:'tabular',sheets:wb.SheetNames.map(n=>({name:n,rows:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})}))});
+      }catch(err){reject(err);} };
+      rd.readAsArrayBuffer(file);
+    } else if(ext==='csv'){
+      rd.onload=e=>{ try{
+        const buf=new Uint8Array(e.target.result);
+        let txt=new TextDecoder('utf-8').decode(buf);
+        if(txt.includes('�')){ try{ txt=new TextDecoder('gbk').decode(buf); }catch(_){} }
+        const wb=XLSX.read(txt,{type:'string',raw:true});
+        resolve({kind:'tabular',sheets:wb.SheetNames.map(n=>({name:n,rows:XLSX.utils.sheet_to_json(wb.Sheets[n],{header:1,raw:true,defval:''})}))});
+      }catch(err){reject(err);} };
+      rd.readAsArrayBuffer(file);
+    } else if(ext==='txt'||ext==='md'){
+      rd.onload=e=>resolve({kind:'text',text:e.target.result,fileName:name});
+      rd.readAsText(file);
+    } else if(ext==='pdf'){
+      rd.onload=async e=>{ try{
+        if(!window.pdfjsLib){ reject(new Error('PDF解析库未加载')); return; }
+        pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+        const pdf=await pdfjsLib.getDocument({data:new Uint8Array(e.target.result)}).promise;
+        let txt='';
+        for(let p=1;p<=pdf.numPages;p++){ const pg=await pdf.getPage(p); const c=await pg.getTextContent(); txt+=c.items.map(i=>i.str).join(' ')+'\n'; }
+        resolve({kind:'text',text:txt,fileName:name});
+      }catch(err){reject(err);} };
+      rd.readAsArrayBuffer(file);
+    } else if(ext==='docx'){
+      rd.onload=async e=>{ try{
+        if(!window.mammoth){ reject(new Error('Word解析库未加载')); return; }
+        const res=await mammoth.extractRawText({arrayBuffer:e.target.result});
+        resolve({kind:'text',text:res.value,fileName:name});
+      }catch(err){reject(err);} };
+      rd.readAsArrayBuffer(file);
+    } else if(ext==='json'){
+      rd.onload=e=>{ try{ resolve({kind:'json',data:JSON.parse(e.target.result)}); }catch(err){reject(err);} };
+      rd.readAsText(file);
+    } else { reject(new Error('暂不支持的文件类型：.'+ext+'（支持 xlsx/csv/txt/md/pdf/docx）')); }
+  });
+}
+
+/* ---- universal import modal ---- */
+function universalImport(opts){
+  opts=opts||{};
+  window.__uiOpts=opts; window.__uiResult=null;
+  const hint = opts.module ? `当前板块：<strong>${(IMP_MODULES[opts.module]||{}).label||opts.module}</strong>（系统会自动识别文件内容，识别到其它类型也会智能归位）` : '系统会自动识别文件属于哪个板块';
+  openModal('上传 / 导入 · 智能识别','UNIVERSAL IMPORT',`
+    <div style="background:var(--green-pale);border-radius:12px;padding:12px 16px;font-size:12.5px;line-height:1.7;color:var(--green-ink);margin-bottom:14px;">
+      💡 支持 <strong>Excel / CSV / Word / PDF / TXT / Markdown</strong>。表格自动识别工作表与列；文档（如会议记录、新闻稿）自动提取关键信息并归入对应板块。<br>
+      ${hint}
+    </div>
+    <label class="btn" style="cursor:pointer;width:100%;justify-content:center;padding:22px;border:2px dashed var(--border-2);background:#fff;color:var(--ink);border-radius:14px;">
+      <span style="font-size:15px;">⬆ 点击选择文件（或拖入）</span>
+      <input type="file" id="uiFile" accept=".xlsx,.xls,.csv,.txt,.md,.pdf,.docx,.json" style="display:none;">
+    </label>
+    <div id="uiStatus" style="margin-top:14px;"></div>
+    <div id="uiPreview" style="margin-top:8px;"></div>`,
+    `<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" id="uiConfirm" disabled style="opacity:.4;" onclick="commitUniversalImport()">确认导入</button>`, true);
+  $('#uiFile').onchange=async ev=>{
+    const file=ev.target.files[0]; if(!file) return;
+    $('#uiStatus').innerHTML=`<div style="font-size:13px;color:var(--muted);">◌ 正在解析「${esc(file.name)}」…</div>`;
+    $('#uiPreview').innerHTML='';
+    try{
+      const parsed=await impParseFile(file);
+      if(parsed.kind==='json'){ impHandleJSON(parsed.data); return; }
+      if(parsed.kind==='text'){ await impHandleText(parsed.text, file.name); return; }
+      // tabular
+      const prof=impFingerprint(parsed.sheets, file.name);
+      if(!prof){
+        $('#uiStatus').innerHTML=`<div style="background:var(--amber-pale);border-radius:10px;padding:12px;font-size:12.5px;color:#8c6c1a;">⚠ 未能自动匹配到已知模板结构。${localStorage.getItem('ai_api_key')?'正在尝试用 AI 识别…':'请配置 AI Key 后可智能识别，或使用对应板块的标准模板。'}</div>`;
+        if(localStorage.getItem('ai_api_key')){ const flat=parsed.sheets.map(s=>s.name+'\n'+s.rows.slice(0,40).map(r=>r.join('\t')).join('\n')).join('\n\n'); await impHandleText(flat, file.name); }
+        return;
+      }
+      const res=prof.parse(parsed.sheets);
+      const targetMod=prof.module;
+      window.__uiResult={module:targetMod, records:res.records, extra:res.extra||null, profName:prof.name};
+      impRenderPreview(targetMod, res.records, res.note, res.extra, prof.name);
+    }catch(err){
+      $('#uiStatus').innerHTML=`<div style="background:var(--red-pale);border-radius:10px;padding:12px;font-size:13px;color:#3c3996;">❌ ${esc(err.message)}</div>`;
+    }
+  };
+}
+
+function impRenderPreview(module, records, note, extra, profName){
+  const m=IMP_MODULES[module]||{label:module};
+  const cols=records.length?Object.keys(records[0]).filter(k=>k!=='id'&&k!=='monthly').slice(0,5):[];
+  $('#uiStatus').innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <span class="pill green">识别为：${esc(profName||m.label)}</span>
+    <span class="pill blue">归入：${esc(m.label)}</span>
+    <span class="pill gray">${esc(note||'')}</span>
+    ${extra?Object.entries(extra).map(([k,v])=>`<span class="pill purple">+${(IMP_MODULES[k]||{}).label||k} ${v.length}条</span>`).join(''):''}
+  </div>`;
+  $('#uiPreview').innerHTML = records.length?`
+    <div class="tbl-wrap" style="max-height:230px;margin-top:8px;"><table class="tbl"><thead><tr>${cols.map(c=>`<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>
+      ${records.slice(0,6).map(r=>`<tr>${cols.map(c=>`<td style="font-size:11.5px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(String(r[c]).slice(0,40))}</td>`).join('')}</tr>`).join('')}
+    </tbody></table></div>${records.length>6?`<div style="font-size:11px;color:var(--muted);margin-top:5px;">…预览前6条，共 ${records.length} 条</div>`:''}`
+    : '<div style="font-size:12px;color:var(--muted);padding:10px;">未解析到有效数据行</div>';
+  const btn=$('#uiConfirm');
+  if(records.length){ btn.disabled=false; btn.style.opacity='1'; }
+}
+
+function commitUniversalImport(){
+  const r=window.__uiResult; if(!r||!r.records||!r.records.length){ toast('没有可导入的数据','warn'); return; }
+  impWrite(r.module, r.records);
+  if(r.extra){ for(const k in r.extra){ impWrite(k, r.extra[k]); } }
+  save(); closeModal();
+  toast(`成功导入 ${r.records.length} 条到「${(IMP_MODULES[r.module]||{}).label||r.module}」✓`);
+  const m=IMP_MODULES[r.module]; if(m&&m.after) m.after();
+  const opts=window.__uiOpts||{}; if(opts.after) opts.after();
+  window.__uiResult=null;
+}
+
+function impWrite(module, records){
+  const m=IMP_MODULES[module]; if(!m){ console.warn('unknown module',module); return; }
+  const arr=m.key(); arr.push(...records);
+}
+
+/* ---- JSON full-backup restore ---- */
+function impHandleJSON(data){
+  if(data && (data.tasks||data.budgetData||data.kol||data.employees)){
+    window.__uiResult=null;
+    $('#uiStatus').innerHTML=`<div style="background:var(--powder);border-radius:10px;padding:12px;font-size:12.5px;color:#3c3996;">检测到完整数据备份 (JSON)。确认后将<strong>合并</strong>到当前数据。</div>`;
+    window.__uiJSON=data;
+    const btn=$('#uiConfirm'); btn.disabled=false; btn.style.opacity='1';
+    btn.setAttribute('onclick','impMergeJSON()');
+  } else { $('#uiStatus').innerHTML='<div style="font-size:12px;color:var(--muted);">无法识别的 JSON 结构。</div>'; }
+}
+function impMergeJSON(){
+  const d=window.__uiJSON; if(!d) return;
+  Object.keys(d).forEach(k=>{ if(Array.isArray(d[k])){ State.data[k]=(State.data[k]||[]).concat(d[k]); } else if(typeof d[k]==='object'&&d[k]){ State.data[k]=Object.assign({},State.data[k],d[k]); } });
+  save(); closeModal(); toast('数据已合并 ✓'); render();
+}
+
+/* ---- TEXT / document -> AI extraction (meeting notes, news, account info) ---- */
+async function impHandleText(text, fileName){
+  const key=localStorage.getItem('ai_api_key');
+  // quick keyword routing for account/credential docs (no AI needed)
+  if(/密码|账号|account|password|登录|网盘/.test(text) && text.length<2000 && !/会议|纪要|议程/.test(text)){
+    const rec={ id:impUid('ba'), name:fileName.replace(/\.[^.]+$/,''), type:'账号资料', format:'TXT/MD', size:'-',
+      uploadDate:todayStr(), owner:'', version:'', tags:'账号,凭证', url:'', notes:text.slice(0,1200) };
+    window.__uiResult={module:'brandAssets', records:[rec], extra:null, profName:'账号/凭证文档'};
+    impRenderPreview('brandAssets',[rec],'已提取为品牌资产（账号凭证）条目', null,'账号/凭证文档');
+    return;
+  }
+  if(!key){
+    $('#uiStatus').innerHTML=`<div style="background:var(--amber-pale);border-radius:10px;padding:12px;font-size:12.5px;color:#8c6c1a;">📄 已提取文档文字（${text.length}字）。<br>配置 AI Key 后可自动识别会议时间/任务/是否纳入周报。当前先存为<strong>品牌资产</strong>归档。</div>`;
+    const rec={ id:impUid('ba'), name:(fileName||'文档').replace(/\.[^.]+$/,''), type:'文档归档', format:(fileName.split('.').pop()||'').toUpperCase(), size:'-',
+      uploadDate:todayStr(), owner:'', version:'', tags:'文档', url:'', notes:text.slice(0,1500) };
+    window.__uiResult={module:'brandAssets', records:[rec], extra:null, profName:'文档归档'};
+    impRenderPreview('brandAssets',[rec],'已提取文档文字归档', null,'文档归档');
+    return;
+  }
+  $('#uiStatus').innerHTML=`<div style="font-size:13px;color:var(--muted);">◌ AI 正在阅读文档并提取结构化信息…</div>`;
+  try{
+    const schema=`你是品牌部数据录入助手。请阅读文档，判断它最适合归入下列哪个板块，并抽取结构化记录。
+可选板块及字段：
+- tasks 任务: {title,assignee,status(待开始/进行中/已完成),dueDate(YYYY-MM-DD),notes}
+- calendarItems 日程: {title,date(YYYY-MM-DD),type,notes}
+- events 线下活动: {name,type,date,location,owner,notes}
+- mediaCoverage 媒体声量: {media,date,title,url}
+- brandAssets 品牌资产: {name,type,notes}
+若是会议记录，请抽取会议时间(date)、议程要点为 tasks/calendarItems，并在 summary 注明是否建议纳入本周周报(includeInWeekly:true/false)。
+只输出 JSON：{"module":"...","records":[...],"summary":"...","includeInWeekly":true/false}`;
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,system:schema,messages:[{role:'user',content:'文档名：'+fileName+'\n\n'+text.slice(0,8000)}]})});
+    if(!resp.ok){ throw new Error('AI 请求失败（检查 Key）'); }
+    const data=await resp.json(); let t=data.content[0].text.trim();
+    const jm=t.match(/\{[\s\S]*\}/); if(jm) t=jm[0];
+    const out=JSON.parse(t);
+    const mod=out.module||'brandAssets';
+    const recs=(out.records||[]).map(r=>Object.assign({id:impUid('x')},r));
+    window.__uiResult={module:mod, records:recs, extra:null, profName:'AI 文档识别'};
+    impRenderPreview(mod, recs, (out.summary||'')+(out.includeInWeekly?' · ✅ 建议纳入本周周报':''), null, 'AI 文档识别');
+    if(out.includeInWeekly){ State.data._weeklyNotes=State.data._weeklyNotes||[]; State.data._weeklyNotes.push({date:todayStr(),summary:out.summary,from:fileName}); }
+  }catch(err){
+    $('#uiStatus').innerHTML=`<div style="background:var(--red-pale);border-radius:10px;padding:12px;font-size:12.5px;color:#3c3996;">AI 识别失败：${esc(err.message)}。已改存为品牌资产归档。</div>`;
+    const rec={ id:impUid('ba'), name:(fileName||'文档').replace(/\.[^.]+$/,''), type:'文档归档', format:'DOC', size:'-', uploadDate:todayStr(), owner:'',version:'',tags:'文档',url:'',notes:text.slice(0,1500) };
+    window.__uiResult={module:'brandAssets',records:[rec],extra:null,profName:'文档归档'};
+    impRenderPreview('brandAssets',[rec],'文档归档', null,'文档归档');
+  }
+}
+
+
 /* ============ Navigation（按使用频率组织：每天用的在最前） ============ */
 const NAV_GROUPS = [
   {key:'work', label:'工作台', icon:'◈', pages:[
@@ -1184,6 +1809,7 @@ const NAV_GROUPS = [
     {id:'marketing-tracking', label:'投放效果', icon:'▷', desc:'各渠道ROI追踪'},
     {id:'media-plan', label:'投放计划', icon:'◑', desc:'渠道×月份预算矩阵'},
     {id:'social-media', label:'内容数据', icon:'◐', desc:'自媒体内容表现'},
+    {id:'member', label:'会员数据', icon:'⊚', desc:'会员复购与商城'},
     {id:'analytics', label:'深度分析', icon:'△', desc:'多维趋势分析'}
   ]},
   {key:'biz', label:'业务管理', icon:'◎', pages:[
@@ -1192,6 +1818,7 @@ const NAV_GROUPS = [
     {id:'kol', label:'KOL达人', icon:'★', desc:'达人合作管理'},
     {id:'vendors', label:'供应商', icon:'⊞', desc:'外部合作方管理'},
     {id:'competitor', label:'竞品监测', icon:'⊙', desc:'竞品动态追踪'},
+    {id:'media-voice', label:'媒体声量', icon:'◍', desc:'PR媒体发布监测'},
     {id:'brand-assets', label:'品牌资产', icon:'◆', desc:'品牌文件素材'},
     {id:'consumer', label:'消费者洞察', icon:'◉', desc:'用户研究存档'},
     {id:'reports', label:'报告存档', icon:'▣', desc:'历史报告复盘'},
@@ -1262,7 +1889,8 @@ function render(){
     'tasks':renderTasks,'calendar':renderCalendar,'campaigns':renderCampaigns,'events':renderEvents,'marketing-tracking':renderMarketingTracking,
     'kol':renderKOL,'social-media':renderSocialMedia,'media-plan':renderMediaPlan,'vendors':renderVendors,
     'brand-assets':renderBrandAssets,'consumer':renderConsumer,'competitor':renderCompetitor,'reports':renderReports,
-    'cross-dept':renderCrossDept,'talent':renderTalent,'budget':renderBudget,'data-manage':renderDataManage
+    'cross-dept':renderCrossDept,'talent':renderTalent,'budget':renderBudget,'data-manage':renderDataManage,
+    'member':renderMember,'media-voice':renderMediaVoice
   }[State.view];
   if(fn) fn(); else $('#main').innerHTML = `<div class="page-head"><div class="page-title">即将上线</div></div>`;
 }
@@ -1687,7 +2315,7 @@ function renderTasks(){
     <span style="font-size:12.5px;font-weight:600;padding:0 4px;">${weekLabel(wk)}</span>
     <button class="btn sm ghost" onclick="nextWeek()">下周 ›</button>
     <div class="seg" style="margin-left:8px;"><button ${State._taskView==='list'?'class="on"':''} onclick="State._taskView='list';renderTasks()">列表</button><button ${State._taskView==='kanban'?'class="on"':''} onclick="State._taskView='kanban';renderTasks()">看板</button></div>
-    <button class="btn sm ghost" onclick="importTasks()">导入</button>
+    <button class="btn sm ghost" onclick="universalImport({module:'tasks',after:renderTasks})">⬆ 上传/导入</button>
     <button class="btn sm ghost" onclick="exportXlsx(State.data.tasks||[],['标题','负责人','类型','优先级','状态','截止日期','预估工时'],['title','assignee','type','priority','status','dueDate','estimatedHours'],'任务列表.xlsx')">导出</button>
     <button class="btn sm ghost" onclick="batchStart('tasks',renderTasks)">批量</button>
     <button class="btn sm" id="btnNewTask" onclick="taskForm()">+ 新建任务</button>
@@ -1818,6 +2446,7 @@ function renderBudget(){
   <div class="page-actions">
     <button class="btn sm ghost" onclick="State.budgetUnlocked=false;renderBudget()">🔒 锁定</button>
     <button class="btn sm ghost" onclick="editAnnualBudget()">✎ 年度预算</button>
+    <button class="btn sm ghost" onclick="universalImport({module:'expenses',after:renderBudget})">⬆ 上传/导入</button>
     <button class="btn sm ghost" onclick="batchStart('expenses',renderBudget)">批量</button>
     <button class="btn sm ghost" onclick="exportXlsx(expenses,['类别','描述','金额','日期','供应商','状态'],['category','desc','amount','date','vendor','status'],'费用记录.xlsx')">导出</button>
     <button class="btn sm" id="btnNewExpense" onclick="expenseForm()">+ 记录费用</button>
@@ -1848,7 +2477,7 @@ function renderBudget(){
 </div>
 <div class="card">
   <div class="card-t">费用记录<span class="ct-sub">${expenses.length}条</span>
-    <button class="btn xs ghost" style="margin-left:auto;" onclick="importExpenses()">导入</button>
+    <button class="btn xs ghost" style="margin-left:auto;" onclick="universalImport({module:'expenses',after:renderBudget})">⬆ 上传/导入</button>
   </div>
   <div class="tbl-wrap"><table class="tbl"><thead><tr>
     ${State.batchMod?'<th style="width:36px;"></th>':''}
@@ -1864,7 +2493,15 @@ function renderBudget(){
       <td><button class="btn xs ghost" onclick="expenseForm('${e.id}')">✎</button></td>
     </tr>`).join(''):`<tr><td colspan="7">${emptyState('◌','暂无费用记录','')}</td></tr>`}
   </tbody></table></div>
-</div>`;
+</div>
+${(State.data.budgetPlan&&State.data.budgetPlan.length)?`<div class="card" style="margin-top:18px;"><div class="card-t">年度预算计划<span class="ct-sub">${State.data.budgetPlan.length}个科目 · 全年¥${wan(State.data.budgetPlan.reduce((s,p)=>s+(p.annual||0),0),0)}万</span></div>
+  <div class="tbl-wrap" style="max-height:340px;"><table class="tbl"><thead><tr><th>二级类目</th><th>三级类目</th><th>代码</th>${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<th>${m}月</th>`).join('')}<th>全年</th></tr></thead><tbody>
+  ${State.data.budgetPlan.map(p=>`<tr><td>${esc(p.category)}</td><td style="font-weight:500;">${esc(p.subCategory)}</td><td class="num" style="font-size:11px;color:var(--muted);">${esc(p.code||'')}</td>${(p.monthly||[]).map(v=>`<td class="num" style="font-size:11px;">${v?fmtN(v):'—'}</td>`).join('')}<td class="num" style="font-weight:700;">${fmtN(p.annual||0)}</td></tr>`).join('')}
+  </tbody></table></div></div>`:''}
+${(State.data.paymentPlan&&State.data.paymentPlan.length)?`<div class="card" style="margin-top:18px;"><div class="card-t">月度付款计划<span class="ct-sub">${State.data.paymentPlan.length}项</span></div>
+  <div class="tbl-wrap" style="max-height:340px;"><table class="tbl"><thead><tr><th>月份</th><th>项目</th><th>总费用</th><th>已支付</th><th>待支付</th><th>预算属性</th><th>类目</th><th>备注</th></tr></thead><tbody>
+  ${State.data.paymentPlan.map(p=>`<tr><td><span class="tag">${esc(p.month)}</span></td><td style="font-weight:500;">${esc(p.project)}</td><td class="num">¥${fmtN(p.total||0)}</td><td class="num" style="color:var(--mint-ink);">¥${fmtN(p.paid||0)}</td><td class="num" style="color:${(p.unpaid||0)>0?'var(--xingyu)':'var(--muted)'};">¥${fmtN(p.unpaid||0)}</td><td>${esc(p.budgetType||'')}</td><td style="font-size:11px;">${esc(p.category||'')}</td><td style="font-size:11px;color:var(--muted);">${esc(p.note||'')}</td></tr>`).join('')}
+  </tbody></table></div></div>`:''}`;
 
   setTimeout(()=>{
     const labels=Object.keys(byCat).filter(k=>byCat[k].spent>0);
@@ -1937,6 +2574,7 @@ function renderCalendar(){
     <button class="btn sm ghost" onclick="State._calMonth--;if(State._calMonth<0){State._calMonth=11;State._calYear--;}renderCalendar()">‹ 上月</button>
     <span style="font-size:13px;font-weight:700;">${y}年${m+1}月</span>
     <button class="btn sm ghost" onclick="State._calMonth++;if(State._calMonth>11){State._calMonth=0;State._calYear++;}renderCalendar()">下月 ›</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderCalendar})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="calItemForm()">+ 新增</button>
   </div>
 </div>
@@ -1996,6 +2634,7 @@ function renderCampaigns(){
   <div class="page-actions">
     <button class="btn sm ghost" onclick="batchStart('campaigns',renderCampaigns)">批量</button>
     <button class="btn sm ghost" onclick="exportXlsx(camps,['名称','目标','预算','已花费','负责人','状态','开始','结束'],['name','objective','budget','spent','owner','status','startDate','endDate'],'Campaign列表.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderCampaigns})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="campForm()">+ 新建</button>
   </div>
 </div>
@@ -2078,6 +2717,7 @@ function renderEvents(){
   <div><div class="page-title">线下活动</div><div class="page-sub">活动策划与执行追踪</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="exportXlsx(evs,['名称','类型','日期','地点','预算','负责人','状态'],['name','type','date','location','budget','owner','status'],'线下活动.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderEvents})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="eventForm()">+ 新建</button>
   </div>
 </div>
@@ -2144,6 +2784,7 @@ function renderMarketingTracking(tab){
   <div><div class="page-title">推广追踪</div><div class="page-sub">各渠道投放效果 · 品牌搜索指数关联分析</div></div>
   <div class="page-actions">
     ${tab==='effect'?`<button class="btn sm ghost" onclick="exportXlsx(State.data.marketingTracking||[],['渠道','Campaign','类型','预算','已花','曝光','点击','转化','营收','状态'],['channel','campaign','type','budget','spent','impressions','clicks','conversions','revenue','status'],'推广追踪.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({module:'marketingTracking',after:renderMarketingTracking})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="mktForm()">+ 新增投放</button>`:`<button class="btn sm ghost" onclick="exportXlsx(State.data.brandKeywords||[],['关键词','平台','日期','搜索指数','备注'],['keyword','platform','date','index','notes'],'品牌搜索指数.xlsx')">导出</button>
     <button class="btn sm" onclick="kwForm()">+ 录入搜索数据</button>`}
   </div>
@@ -2317,7 +2958,7 @@ function renderKOL(){
   <div class="page-actions">
     <button class="btn sm ghost" onclick="batchStart('kol',renderKOL)">批量</button>
     <button class="btn sm ghost" onclick="exportXlsx(kols,['名称','平台','类别','粉丝','费用','状态','合同截止','负责人'],['name','platform','category','fans','fee','status','contractEnd','owner'],'KOL达人库.xlsx')">导出</button>
-    <button class="btn sm ghost" onclick="importKOL()">导入</button>
+    <button class="btn sm ghost" onclick="universalImport({module:'kol',after:renderKOL})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="kolForm()">+ 新增达人</button>
   </div>
 </div>
@@ -2401,6 +3042,7 @@ function renderSocialMedia(){
 <div class="page-head">
   <div><div class="page-title">自媒体数据</div><div class="page-sub">内容发布与数据监测</div></div>
   <div class="page-actions">
+    <button class="btn sm ghost" onclick="universalImport({module:'socialPosts',after:renderSocialMedia})">⬆ 上传/导入</button>
     <button class="btn sm ghost" onclick="exportXlsx(posts,['平台','标题','类型','发布日期','状态','点赞','评论','分享','收藏'],['platform','title','type','publishDate','status','likes','comments','shares','saves'],'内容数据.xlsx')">导出</button>
     <button class="btn sm" onclick="socialForm()">+ 新增内容</button>
   </div>
@@ -2430,7 +3072,11 @@ function renderSocialMedia(){
       <td><button class="btn xs ghost" onclick="socialForm('${p.id}')">✎</button></td>
     </tr>`).join(''):`<tr><td colspan="9">${emptyState('◐','暂无内容记录','')}</td></tr>`}
   </tbody></table></div>
-</div>`;
+</div>
+${(State.data.socialMonthly&&State.data.socialMonthly.length)?`<div class="card" style="margin-top:18px;"><div class="card-t">各平台月度数据<span class="ct-sub">${State.data.socialMonthly.length}条</span></div>
+  <div class="tbl-wrap" style="max-height:340px;"><table class="tbl"><thead><tr><th>平台</th><th>年</th><th>月</th><th>曝光</th><th>阅读</th><th>互动</th><th>增粉</th><th>更新条数</th><th>视频播放</th></tr></thead><tbody>
+  ${State.data.socialMonthly.map(r=>`<tr><td style="font-weight:600;">${esc(r.platform)}</td><td>${esc(r.year)}</td><td>${esc(r.month)}</td><td class="num">${fmtN(r.impressions||0)}</td><td class="num">${fmtN(r.reads||0)}</td><td class="num">${fmtN(r.interactions||0)}</td><td class="num">${fmtN(r.fansGain||0)}</td><td class="num">${fmtN(r.posts||0)}</td><td class="num">${fmtN(r.videoPlays||0)}</td></tr>`).join('')}
+  </tbody></table></div></div>`:''}`;
   setTimeout(()=>{
     const pub=posts.filter(p=>p.status==='已发').slice(-8);
     lineChart('socialChart',pub.map(p=>(p.publishDate||'').slice(5)),[
@@ -2482,6 +3128,7 @@ function renderMediaPlan(){
   <div><div class="page-title">媒体投放计划</div><div class="page-sub">分渠道月度预算矩阵</div></div>
   <div class="page-actions">
     <div class="seg"><button ${State._mpTab==='matrix'?'class="on"':''} onclick="State._mpTab='matrix';renderMediaPlan()">投放矩阵</button><button ${State._mpTab==='chart'?'class="on"':''} onclick="State._mpTab='chart';renderMediaPlan()">计划 vs 实际</button></div>
+    <button class="btn sm ghost" onclick="universalImport({after:renderMediaPlan})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="mpForm()">+ 添加计划</button>
   </div>
 </div>
@@ -2552,6 +3199,7 @@ function renderVendors(){
   <div><div class="page-title">外部资产管理</div><div class="page-sub">供应商与外协管理</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="exportXlsx(vs,['名称','类型','联系人','电话','状态','年度合同额'],['name','type','contact','phone','status','annualContract'],'供应商.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderVendors})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="vendorForm()">+ 新增</button>
   </div>
 </div>
@@ -2611,6 +3259,7 @@ function renderBrandAssets(){
   <div><div class="page-title">品牌资产</div><div class="page-sub">品牌文件与素材管理</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="exportXlsx(assets,['名称','类型','格式','大小','上传日期','负责人','版本'],['name','type','format','size','uploadDate','owner','version'],'品牌资产.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderBrandAssets})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="assetForm()">+ 新增</button>
   </div>
 </div>
@@ -2666,6 +3315,7 @@ function renderConsumer(){
   <div><div class="page-title">消费者洞察</div><div class="page-sub">用户研究与洞察管理</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="exportXlsx(ins,['标题','类型','日期','来源','样本量','状态'],['title','type','date','source','sampleSize','status'],'消费者洞察.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderConsumer})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="insightForm()">+ 新增洞察</button>
   </div>
 </div>
@@ -2717,6 +3367,7 @@ function renderCompetitor(){
   <div><div class="page-title">竞品监测</div><div class="page-sub">竞争品牌动态追踪</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="exportXlsx(comps,['品牌','类别','微博粉丝','抖音粉丝','小红书粉丝','月均花费估算','定位'],['name','category','weiboFans','douyinFans','xhsFans','estMonthlySpend','positioning'],'竞品监测.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderCompetitor})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="compForm()">+ 添加竞品</button>
   </div>
 </div>
@@ -2837,6 +3488,7 @@ function renderReports(){
   <div><div class="page-title">报告复盘</div><div class="page-sub">历史报告与复盘存档</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="exportXlsx(rpts,['标题','类型','日期','作者','状态'],['title','type','date','author','status'],'报告列表.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderReports})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="reportForm()">+ 新建报告</button>
   </div>
 </div>
@@ -3053,6 +3705,7 @@ function renderCrossDept(){
   <div><div class="page-title">跨部门需求</div><div class="page-sub">品牌部对外协作需求管理</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="exportXlsx(reqs,['标题','目标部门','优先级','状态','负责人','截止'],['title','toDept','priority','status','owner','deadline'],'跨部门需求.xlsx')">导出</button>
+    <button class="btn sm ghost" onclick="universalImport({after:renderCrossDept})">⬆ 上传/导入</button>
     <button class="btn sm" onclick="cdForm()">+ 新建需求</button>
   </div>
 </div>
@@ -3132,7 +3785,7 @@ function renderTalent(tab){
   <div><div class="page-title">人才管理</div><div class="page-sub">团队能力评估 · 画像分析 · 晋升路径</div></div>
   <div class="page-actions">
     <button class="btn sm ghost" onclick="State.talentUnlocked=false;renderTalent()">🔒 锁定</button>
-    <button class="btn sm ghost" onclick="importEmployees()">导入</button>
+    <button class="btn sm ghost" onclick="universalImport({module:'tasks',after:renderTalent})">⬆ 上传/导入</button>
     <button class="btn sm ghost" onclick="exportXlsx(emps,['姓名','职位','部门','状态','入职日期','邮箱'],['name','role','dept','status','hireDate','email'],'团队名单.xlsx')">导出</button>
     <button class="btn sm" onclick="empForm()">+ 新增成员</button>
   </div>
@@ -3373,6 +4026,119 @@ function saveEmp(id,personalStr,posStr){
 }
 
 /* ============ DATA MANAGE ============ */
+
+/* ============ 会员数据 (member) ============ */
+function renderMember(){
+  const rows=State.data.memberData||[];
+  const latest=rows[rows.length-1]||{};
+  $('#main').innerHTML=`
+<div class="page-head">
+  <div><div class="page-title">会员数据</div><div class="page-sub">会员商城复购与转化监测</div></div>
+  <div class="page-actions">
+    <button class="btn sm ghost" onclick="universalImport({module:'memberData',after:renderMember})">⬆ 上传/导入</button>
+    <button class="btn sm" onclick="memberForm()">+ 录入</button>
+  </div>
+</div>
+<div class="statchips">
+  ${statChip('总会员数',fmtN(latest.totalMembers||0),'⊚','var(--lavender)','var(--lavender-ink)')}
+  ${statChip('支付会员',fmtN(latest.paidMembers||0),'✓','var(--mint)','var(--mint-ink)')}
+  ${statChip('会员复购率',(latest.repurchaseRate||0)+'%','↻','var(--powder)','var(--powder-ink)')}
+  ${statChip('会员客单价','¥'+fmtN(latest.memberAOV||0),'◌','var(--cream)','var(--cream-ink)')}
+</div>
+<div class="card">
+  <div class="card-t">会员数据记录<span class="ct-sub">${rows.length}条</span></div>
+  <div class="tbl-wrap"><table class="tbl"><thead><tr><th>店铺</th><th>日期</th><th>总会员</th><th>支付会员</th><th>新增会员</th><th>会员客单价</th><th>复购率</th><th>复购金额</th><th></th></tr></thead><tbody>
+    ${rows.length?rows.map(r=>`<tr>
+      <td style="font-weight:600;">${esc(r.store)}</td><td class="num">${esc(r.date)}</td>
+      <td class="num">${fmtN(r.totalMembers||0)}</td><td class="num">${fmtN(r.paidMembers||0)}</td>
+      <td class="num">${fmtN(r.newMembers||0)}</td><td class="num">¥${fmtN(r.memberAOV||0)}</td>
+      <td class="num" style="font-weight:700;">${r.repurchaseRate||0}%</td><td class="num">¥${fmtN(r.repurchaseAmount||0)}</td>
+      <td><button class="btn xs ghost" onclick="memberForm('${r.id}')">✎</button></td>
+    </tr>`).join(''):`<tr><td colspan="9">${emptyState('⊚','暂无会员数据','上传会员数据表或点击录入')}</td></tr>`}
+  </tbody></table></div>
+</div>`;
+}
+function memberForm(id){
+  const arr=State.data.memberData||(State.data.memberData=[]);
+  const m=id?arr.find(x=>x.id===id):{};
+  openModal(id?'编辑会员数据':'录入会员数据','MEMBER',formHTML([
+    {k:'store',label:'店铺',def:m.store||'全部店铺'},
+    {k:'date',label:'统计周期',def:m.date||'',ph:'如 2026年 / 2026-06'},
+    {k:'totalMembers',label:'总会员数',type:'number',def:m.totalMembers||0},
+    {k:'paidMembers',label:'支付会员数',type:'number',def:m.paidMembers||0},
+    {k:'newMembers',label:'新增会员数',type:'number',def:m.newMembers||0},
+    {k:'memberAOV',label:'会员客单价',type:'number',def:m.memberAOV||0},
+    {k:'repurchaseRate',label:'会员复购率(%)',type:'number',def:m.repurchaseRate||0},
+    {k:'repurchaseAmount',label:'复购支付金额',type:'number',def:m.repurchaseAmount||0}
+  ],m),`${id?`<button class="btn danger sm" onclick="closeModal();confirmDialog('删除？',()=>{const i=State.data.memberData.findIndex(x=>x.id==='${id}');if(i>=0)State.data.memberData.splice(i,1);save();renderMember();toast('已删除')})">删除</button><span class="flex1"></span>`:''}
+    <button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveMember('${id||''}')">保存</button>`,true);
+}
+function saveMember(id){
+  const f=readForm([{k:'store'},{k:'date'},{k:'totalMembers',type:'number'},{k:'paidMembers',type:'number'},{k:'newMembers',type:'number'},{k:'memberAOV',type:'number'},{k:'repurchaseRate',type:'number'},{k:'repurchaseAmount',type:'number'}]);
+  if(!State.data.memberData) State.data.memberData=[];
+  if(id){const i=State.data.memberData.findIndex(x=>x.id===id);if(i>=0)State.data.memberData[i]=Object.assign({},State.data.memberData[i],f);}
+  else State.data.memberData.push({id:uid('mb'),...f});
+  save();closeModal();renderMember();toast('已保存');
+}
+
+/* ============ 媒体声量 (media-voice) ============ */
+function renderMediaVoice(){
+  const rows=State.data.mediaCoverage||[];
+  const byTitle={}; rows.forEach(r=>{ const k=r.title||'未命名'; (byTitle[k]=byTitle[k]||[]).push(r); });
+  const topics=Object.entries(byTitle).sort((a,b)=>b[1].length-a[1].length);
+  $('#main').innerHTML=`
+<div class="page-head">
+  <div><div class="page-title">媒体声量</div><div class="page-sub">PR 媒体发布与传播监测</div></div>
+  <div class="page-actions">
+    <button class="btn sm ghost" onclick="universalImport({module:'mediaCoverage',after:renderMediaVoice})">⬆ 上传/导入</button>
+    <button class="btn sm" onclick="mediaForm()">+ 录入</button>
+  </div>
+</div>
+<div class="statchips">
+  ${statChip('媒体发布总数',rows.length+'篇','◍','var(--lavender)','var(--lavender-ink)')}
+  ${statChip('覆盖媒体',new Set(rows.map(r=>r.media)).size+'家','▣','var(--mint)','var(--mint-ink)')}
+  ${statChip('传播主题',topics.length+'个','◆','var(--powder)','var(--powder-ink)')}
+</div>
+${topics.length?`<div class="card" style="margin-bottom:18px;"><div class="card-t">传播主题声量排名</div>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+  ${topics.slice(0,8).map(([t,arr],i)=>`<div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-family:var(--font-m);font-size:11px;color:var(--muted);width:16px;">${i+1}</span>
+    <span style="font-size:12.5px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(t)}</span>
+    <div style="width:120px;height:6px;background:var(--bg);border-radius:99px;overflow:hidden;"><div style="height:100%;background:var(--xingyu);border-radius:99px;width:${Math.min(100,arr.length/topics[0][1].length*100)}%;"></div></div>
+    <span style="font-family:var(--font-m);font-size:11px;font-weight:700;">${arr.length}篇</span>
+  </div>`).join('')}</div></div>`:''}
+<div class="card">
+  <div class="card-t">媒体发布明细<span class="ct-sub">${rows.length}篇</span></div>
+  <div class="tbl-wrap" style="max-height:560px;"><table class="tbl"><thead><tr><th>媒体名称</th><th>日期</th><th>文章标题</th><th>链接</th><th></th></tr></thead><tbody>
+    ${rows.length?rows.map(r=>`<tr>
+      <td style="font-weight:600;white-space:nowrap;">${esc(r.media)}</td><td class="num">${esc(r.date)}</td>
+      <td style="max-width:380px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(r.title)}</td>
+      <td>${r.url?`<a href="${esc(r.url)}" target="_blank" style="color:var(--xingyu);font-size:11px;">查看 →</a>`:'—'}</td>
+      <td><button class="btn xs ghost" onclick="mediaForm('${r.id}')">✎</button></td>
+    </tr>`).join(''):`<tr><td colspan="5">${emptyState('◍','暂无媒体记录','上传媒体发布监测表或点击录入')}</td></tr>`}
+  </tbody></table></div>
+</div>`;
+}
+function mediaForm(id){
+  const arr=State.data.mediaCoverage||(State.data.mediaCoverage=[]);
+  const m=id?arr.find(x=>x.id===id):{};
+  openModal(id?'编辑媒体记录':'录入媒体发布','MEDIA',formHTML([
+    {k:'media',label:'媒体名称',def:m.media||''},
+    {k:'date',label:'发布日期',type:'date',def:m.date||todayStr()},
+    {k:'title',label:'文章标题',def:m.title||''},
+    {k:'url',label:'发布网址',def:m.url||''}
+  ],m),`${id?`<button class="btn danger sm" onclick="closeModal();confirmDialog('删除？',()=>{const i=State.data.mediaCoverage.findIndex(x=>x.id==='${id}');if(i>=0)State.data.mediaCoverage.splice(i,1);save();renderMediaVoice();toast('已删除')})">删除</button><span class="flex1"></span>`:''}
+    <button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" onclick="saveMedia('${id||''}')">保存</button>`,true);
+}
+function saveMedia(id){
+  const f=readForm([{k:'media'},{k:'date'},{k:'title'},{k:'url'}]);
+  if(!f.media){toast('请填写媒体名称','warn');return;}
+  if(!State.data.mediaCoverage) State.data.mediaCoverage=[];
+  if(id){const i=State.data.mediaCoverage.findIndex(x=>x.id===id);if(i>=0)State.data.mediaCoverage[i]=Object.assign({},State.data.mediaCoverage[i],f);}
+  else State.data.mediaCoverage.push({id:uid('mc'),...f});
+  save();closeModal();renderMediaVoice();toast('已保存');
+}
+
 function renderDataManage(){
   const d=State.data;
   const counts={
@@ -3530,7 +4296,7 @@ async function sendAIPalette(msg){
     const msgs=State.aiChat.filter(m=>m.content!=='◌ 思考中…').map(m=>({role:m.role,content:m.content}));
     const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:`你是青蛙王子品牌部的AI助手。当前系统数据：${ctx}`,messages:msgs})
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:`你是品牌部的AI助手。当前系统数据：${ctx}`,messages:msgs})
     });
     State.aiChat=State.aiChat.filter(m=>m.content!=='◌ 思考中…');
     if(!resp.ok){State.aiChat.push({role:'assistant',content:'请求失败，请检查 API Key 是否正确。'});}
@@ -3547,7 +4313,7 @@ function aiQuick(msg){ openPalette(); setTimeout(()=>{ $('#palInput').value=msg;
 
 function buildAIContext(){
   const d=State.data; const lines=[];
-  lines.push('品牌：青蛙王子 (Frogprince) 婴儿/儿童护肤品牌');
+  lines.push('品牌工作台 · 婴童护肤品牌部');
   lines.push(`当前日期：${todayStr()}`);
   const tasks=d.tasks||[]; const wk=getWeekStr(new Date());
   lines.push(`本周任务：${tasks.filter(t=>t.weekOf===wk).length}项，完成${tasks.filter(t=>t.weekOf===wk&&t.status==='已完成').length}项`);
